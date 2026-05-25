@@ -35,14 +35,30 @@ To pick up updates to the shared standards, just `git pull` in the repo. The nex
 
 ### New Project
 
-Use `bin/sync.sh init` to bootstrap a project. It copies `.github/` and the chosen stack template into the project and records a version stamp so drift can be detected later.
+Use `bin/sync.sh init` to bootstrap a project. It copies in the GitHub workflow templates, the chosen stack `CLAUDE.md`, and the docs scaffolding (glossary, PRD/ADR templates, discovery Q&A playbook), then records a version stamp so drift can be detected later.
 
 ```bash
 ~/Projects/sdlc_template/bin/sync.sh init /path/to/your-project --stack=typescript
 # stacks: typescript | python | go
 ```
 
-The script refuses to overwrite an existing `.github/`, `CLAUDE.md`, or `.sdlc-template-version` unless you pass `--force`.
+After bootstrap, the project contains:
+
+```
+<project>/
+├── .github/ISSUE_TEMPLATE/      # bug, feature, refactor, security, initiative, epic, story, task
+├── .github/pull_request_template.md
+├── .sdlc-template-version       # records the template SHA at bootstrap
+├── CLAUDE.md                    # the chosen stack template
+└── docs/
+    ├── glossary.md              # work-tracking vocabulary + labels
+    ├── discovery-qa.md          # playbook Claude follows when you bring a new idea
+    └── templates/
+        ├── prd-template.md
+        └── adr-template.md
+```
+
+`init` refuses to overwrite an existing `.github/`, `CLAUDE.md`, `.sdlc-template-version`, or any of the templated `docs/` paths unless you pass `--force`. Consumer-owned directories like `docs/prds/` and `docs/adrs/` are never touched, even on `--force`.
 
 After bootstrap, edit the project's `CLAUDE.md` and fill in the **Project Architecture** section at the bottom — application type, key directories, ports, and key decisions.
 
@@ -71,11 +87,44 @@ Limitation: files deleted from the template upstream are not currently flagged.
 | `project-claude-template-typescript.md` | Per-project template for TypeScript + Prisma + Better Auth + Docker projects |
 | `project-claude-template-python.md` | Per-project template for Python + uv + Docker projects |
 | `project-claude-template-go.md` | Per-project template for Go + Docker projects |
-| `.github/ISSUE_TEMPLATE/` | GitHub issue templates (bug, feature, refactor, security) |
+| `.github/ISSUE_TEMPLATE/` | GitHub issue templates (bug, feature, refactor, security, initiative, epic, story, task) |
 | `.github/pull_request_template.md` | GitHub PR template |
+| `docs/glossary.md` | Work-tracking vocabulary (Initiative / Epic / Story / Task) and label conventions |
+| `docs/discovery-qa.md` | Playbook Claude follows to turn a product idea into a draft PRD |
+| `docs/templates/prd-template.md` | PRD scaffolding (filed into `docs/prds/` per project) |
+| `docs/templates/adr-template.md` | ADR scaffolding (filed into `docs/adrs/` per project) |
 | `bin/sync.sh` | Bootstrap projects from this template and detect drift |
 
 `~/.claude/personal-claude.md` is referenced by the import setup but lives only on your machine — it is not in this repo by design.
+
+## Work Tracking
+
+Each bootstrapped project gets a four-level hierarchy for tracking work:
+
+- **Initiative** — multi-quarter direction, backed by a PRD
+- **Epic** — multi-week deliverable that ladders into an Initiative
+- **Story** — user-visible change shippable in 1–5 days
+- **Task** — subordinate work under a Story, or a standalone chore
+
+Each level has a GitHub issue template under `.github/ISSUE_TEMPLATE/`. Parent–child relationships use GitHub's native **+ Add sub-issue** UI. See `docs/glossary.md` for the full definitions and label conventions.
+
+### The Flow
+
+```
+Idea → Discovery Q&A → Draft PRD → PRD review → Initiative issue
+                                                  ↓
+                                       Decomposition (proposed Epics + Stories)
+                                                  ↓
+                                       Human review of proposed issues
+                                                  ↓
+                                       Issues filed via gh
+                                                  ↓
+                                       Normal commit/PR pipeline
+```
+
+When you bring a new product or feature idea to Claude in a bootstrapped project, it follows `docs/discovery-qa.md` — a structured Q&A that produces a draft PRD at `docs/prds/<slug>.md`. After you approve the PRD, Claude proposes Epics and initial Stories as a draft list, then creates them as GitHub issues only after you sign off.
+
+PRDs and ADRs live in the project's own `docs/prds/` and `docs/adrs/` directories — generated per project from `docs/templates/`. Those generated docs may contain pre-launch business context; if your project is public, you may want to gitignore them.
 
 ## Design Principles
 

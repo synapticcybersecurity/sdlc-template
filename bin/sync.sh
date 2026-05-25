@@ -72,6 +72,9 @@ cmd_init() {
     [[ -e "$target/.github" ]]                && die "$target/.github exists (use --force to overwrite, or run 'check')"
     [[ -e "$target/CLAUDE.md" ]]              && die "$target/CLAUDE.md exists (use --force to overwrite)"
     [[ -e "$target/.sdlc-template-version" ]] && die "$target/.sdlc-template-version exists — project is already bootstrapped (use --force to re-bootstrap)"
+    [[ -e "$target/docs/glossary.md" ]]       && die "$target/docs/glossary.md exists (use --force to overwrite)"
+    [[ -e "$target/docs/discovery-qa.md" ]]   && die "$target/docs/discovery-qa.md exists (use --force to overwrite)"
+    [[ -e "$target/docs/templates" ]]         && die "$target/docs/templates exists (use --force to overwrite)"
   fi
 
   require_clean_template_repo
@@ -82,6 +85,16 @@ cmd_init() {
 
   echo "Copying $(basename "$stack_template") -> $target/CLAUDE.md"
   cp "$stack_template" "$target/CLAUDE.md"
+
+  echo "Copying docs scaffolding -> $target/docs/"
+  # Replace only the paths we own. Consumer-owned dirs like docs/prds/ and
+  # docs/adrs/ are deliberately untouched, even on --force.
+  rm -f "$target/docs/glossary.md" "$target/docs/discovery-qa.md"
+  rm -rf "$target/docs/templates"
+  mkdir -p "$target/docs/templates"
+  cp "$REPO_ROOT/docs/glossary.md"     "$target/docs/glossary.md"
+  cp "$REPO_ROOT/docs/discovery-qa.md" "$target/docs/discovery-qa.md"
+  cp -R "$REPO_ROOT/docs/templates/." "$target/docs/templates/"
 
   local sha
   sha="$(git -C "$REPO_ROOT" rev-parse HEAD)"
@@ -132,11 +145,16 @@ cmd_check() {
   local stack_template_rel="project-claude-template-${stack}.md"
   local exit_code=0
 
-  # Collect every file currently in the template that we care about.
+  # Enumerate files at the template repo's current HEAD (committed state).
+  # Working-tree-only files are intentionally excluded — check compares
+  # committed states. Consumer-owned paths (docs/prds/, docs/adrs/,
+  # anything not under .github/ or docs/) are also not checked.
   local files_to_check=()
   while IFS= read -r f; do
     files_to_check+=("$f")
-  done < <(cd "$REPO_ROOT" && find .github -type f | sort)
+  done < <(
+    git -C "$REPO_ROOT" ls-tree -r --name-only HEAD -- .github docs | sort
+  )
   files_to_check+=("$stack_template_rel")
 
   local f rel_in_project tmpl_blob_current tmpl_blob_bootstrap proj_path proj_content
