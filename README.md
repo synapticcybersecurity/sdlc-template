@@ -35,26 +35,33 @@ To pick up updates to the shared standards, just `git pull` in the repo. The nex
 
 ### New Project
 
-1. Copy the GitHub templates into your project:
-   ```bash
-   cp -r .github/ /path/to/your-project/.github/
-   ```
+Use `bin/sync.sh init` to bootstrap a project. It copies `.github/` and the chosen stack template into the project and records a version stamp so drift can be detected later.
 
-2. Copy the appropriate stack template as your project's Claude instructions:
-   ```bash
-   # TypeScript + Prisma + Better Auth
-   cp project-claude-template-typescript.md /path/to/your-project/CLAUDE.md
+```bash
+~/Projects/sdlc_template/bin/sync.sh init /path/to/your-project --stack=typescript
+# stacks: typescript | python | go
+```
 
-   # Python + uv
-   cp project-claude-template-python.md /path/to/your-project/CLAUDE.md
+The script refuses to overwrite an existing `.github/`, `CLAUDE.md`, or `.sdlc-template-version` unless you pass `--force`.
 
-   # Go
-   cp project-claude-template-go.md /path/to/your-project/CLAUDE.md
-   ```
+After bootstrap, edit the project's `CLAUDE.md` and fill in the **Project Architecture** section at the bottom — application type, key directories, ports, and key decisions.
 
-3. Edit the `CLAUDE.md` in your project and fill in the **Project Architecture** section at the bottom — application type, key directories, ports, and key decisions.
+### Detecting Drift in a Bootstrapped Project
 
-> A per-project `bin/sync.sh` to handle bootstrap and drift detection is planned. For now, project setup is still copy-based.
+`bin/sync.sh check` compares a project's templated files against the template at the SHA it was bootstrapped from and against current HEAD. It reports local edits and upstream changes separately, exits non-zero on any drift, and accepts `--diff` to show unified diffs.
+
+```bash
+~/Projects/sdlc_template/bin/sync.sh check /path/to/your-project
+~/Projects/sdlc_template/bin/sync.sh check /path/to/your-project --diff
+```
+
+Output tags:
+- `OK` — file matches both the bootstrap baseline and current HEAD
+- `DRIFT … local-edits` — project changed the file since bootstrap
+- `DRIFT … upstream-newer` — template changed the file since bootstrap (you may want to update)
+- `MISSING` — template has the file, project does not
+
+Limitation: files deleted from the template upstream are not currently flagged.
 
 ## What's in This Repo
 
@@ -66,6 +73,7 @@ To pick up updates to the shared standards, just `git pull` in the repo. The nex
 | `project-claude-template-go.md` | Per-project template for Go + Docker projects |
 | `.github/ISSUE_TEMPLATE/` | GitHub issue templates (bug, feature, refactor, security) |
 | `.github/pull_request_template.md` | GitHub PR template |
+| `bin/sync.sh` | Bootstrap projects from this template and detect drift |
 
 `~/.claude/personal-claude.md` is referenced by the import setup but lives only on your machine — it is not in this repo by design.
 
