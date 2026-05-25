@@ -13,6 +13,8 @@ Every change is part of an engineering workflow. These rules apply to all work:
 - **One concern per change:** Do not mix unrelated features, refactors, or formatting in the same branch or PR.
 - **No silent architecture changes:** Before changing module boundaries, data flow, or system interfaces, surface the decision and get confirmation.
 - **Finish the unit of work:** Code, tests, documentation, and validation are one delivery — not separate tasks to defer.
+- **Offer documentation updates proactively:** After adding something new (a role, module, playbook, feature, command, configuration knob) or making a significant change to existing items (architecture shift, renamed convention, behavior change, new constraint, dropped capability), explicitly offer to update relevant documentation — don't wait to be asked. Concrete candidates to consider every time: the project README, design docs in `docs/`, role/module READMEs, deferred-work or migration trackers, ADRs, inline CLAUDE.md files, and architectural memory entries. Surface specific update proposals (e.g. "the IPv6 explanation in `roles/foo/README.md` is now inaccurate; want me to fix it?") rather than open-ended "anything else?" prompts, so the user can accept or reject quickly.
+- **Don't volunteer stopping points:** Do not propose "good stopping point", "let's call it for the night", "stop here?" etc. unprompted, even after wrapping a substantial chunk of work. Summarize what happened and wait for the next instruction. The user will say when to stop.
 
 ---
 
