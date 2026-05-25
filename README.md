@@ -2,6 +2,30 @@
 
 Reusable standards and templates for Claude Code projects. Contains the shared global Claude instructions, per-project templates for multiple stacks, and GitHub workflow templates.
 
+## Quickstart
+
+Three commands and you're running:
+
+```bash
+# 1. Clone this repo (one time, somewhere stable)
+git clone https://github.com/synapticcybersecurity/sdlc-template.git ~/Projects/sdlc_template
+
+# 2. Wire your global Claude instructions to import from it
+mkdir -p ~/.claude
+cat > ~/.claude/CLAUDE.md <<'EOF'
+# Global instructions
+@~/Projects/sdlc_template/global-claude.md
+EOF
+
+# 3. Bootstrap a new project
+mkdir ~/Projects/myapp && cd ~/Projects/myapp && git init
+~/Projects/sdlc_template/bin/sync.sh init . --stack=typescript
+```
+
+Now open Claude Code in `~/Projects/myapp` and describe an idea: *"I want to build a tool that..."*. Claude will follow `docs/discovery-qa.md` to turn it into a draft PRD, then propose Epics and Stories.
+
+For the day-to-day "what do I do for X" guide, see [`docs/getting-started.md`](docs/getting-started.md). For a worked example of a real PRD and ADR, see [`examples/`](examples/).
+
 ## How Loading Works
 
 Claude Code loads instructions from two levels:
@@ -127,6 +151,15 @@ Idea → Discovery Q&A → Draft PRD → PRD review → Initiative issue
 When you bring a new product or feature idea to Claude in a bootstrapped project, it follows `docs/discovery-qa.md` — a structured Q&A that produces a draft PRD at `docs/prds/<slug>.md`. After you approve the PRD, Claude proposes Epics and initial Stories as a draft list, then creates them as GitHub issues only after you sign off.
 
 PRDs and ADRs live in the project's own `docs/prds/` and `docs/adrs/` directories — generated per project from `docs/templates/`. Those generated docs may contain pre-launch business context; if your project is public, you may want to gitignore them.
+
+## Examples
+
+The [`examples/`](examples/) directory contains a worked example of a small product running through the full flow:
+
+- [`examples/prds/standup-digest.md`](examples/prds/standup-digest.md) — a PRD for a toy product: a CLI tool that summarizes your daily GitHub state for standup
+- [`examples/adrs/001-use-flat-file-cache.md`](examples/adrs/001-use-flat-file-cache.md) — the first ADR written during implementation: flat JSON file vs SQLite for the cache
+
+These are deliberately *not* copied into bootstrapped projects (`sync.sh` ignores anything outside `.github/` and `docs/`). They live here as reference material for someone learning the system. The PRD is a complete fill-in of `docs/templates/prd-template.md`; the ADR is a complete fill-in of `docs/templates/adr-template.md`.
 
 ## Design Principles
 

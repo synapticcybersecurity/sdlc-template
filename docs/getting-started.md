@@ -2,7 +2,7 @@
 
 You've landed in a project bootstrapped from the `sdlc_template` scaffolding — Initiative / Epic / Story / Task hierarchy, PRDs for substantial work, ADRs for technical decisions. This doc is the practical "what do I do next" companion.
 
-For the reference material (definitions, label conventions, lifecycle diagram), see `docs/glossary.md`.
+For the reference material (definitions, label conventions, lifecycle diagram), see `docs/glossary.md`. For worked examples of a real PRD and ADR, see the [`examples/`](https://github.com/synapticcybersecurity/sdlc-template/tree/main/examples) directory in the `sdlc_template` repo.
 
 ## 30-second orientation
 
