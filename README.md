@@ -53,6 +53,7 @@ After bootstrap, the project contains:
 └── docs/
     ├── glossary.md              # work-tracking vocabulary + labels
     ├── discovery-qa.md          # playbook Claude follows when you bring a new idea
+    ├── getting-started.md       # human orientation — read this first in a new project
     └── templates/
         ├── prd-template.md
         └── adr-template.md
@@ -91,6 +92,7 @@ Limitation: files deleted from the template upstream are not currently flagged.
 | `.github/pull_request_template.md` | GitHub PR template |
 | `docs/glossary.md` | Work-tracking vocabulary (Initiative / Epic / Story / Task) and label conventions |
 | `docs/discovery-qa.md` | Playbook Claude follows to turn a product idea into a draft PRD |
+| `docs/getting-started.md` | Human-facing orientation for someone in a bootstrapped project — decision tree, edge cases, FAQ |
 | `docs/templates/prd-template.md` | PRD scaffolding (filed into `docs/prds/` per project) |
 | `docs/templates/adr-template.md` | ADR scaffolding (filed into `docs/adrs/` per project) |
 | `bin/sync.sh` | Bootstrap projects from this template and detect drift |
