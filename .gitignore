@@ -3,3 +3,6 @@
 *.swo
 *~
 .env
+
+# Personal addendum lives in ~/.claude/, never in this repo
+personal-claude.md
