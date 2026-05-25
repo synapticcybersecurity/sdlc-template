@@ -72,9 +72,9 @@ cmd_init() {
     [[ -e "$target/.github" ]]                && die "$target/.github exists (use --force to overwrite, or run 'check')"
     [[ -e "$target/CLAUDE.md" ]]              && die "$target/CLAUDE.md exists (use --force to overwrite)"
     [[ -e "$target/.sdlc-template-version" ]] && die "$target/.sdlc-template-version exists — project is already bootstrapped (use --force to re-bootstrap)"
-    [[ -e "$target/docs/glossary.md" ]]       && die "$target/docs/glossary.md exists (use --force to overwrite)"
-    [[ -e "$target/docs/discovery-qa.md" ]]   && die "$target/docs/discovery-qa.md exists (use --force to overwrite)"
-    [[ -e "$target/docs/templates" ]]         && die "$target/docs/templates exists (use --force to overwrite)"
+    while IFS= read -r f; do
+      [[ -e "$target/$f" ]] && die "$target/$f exists (use --force to overwrite)"
+    done < <(git -C "$REPO_ROOT" ls-tree -r --name-only HEAD -- docs)
   fi
 
   require_clean_template_repo
@@ -87,14 +87,14 @@ cmd_init() {
   cp "$stack_template" "$target/CLAUDE.md"
 
   echo "Copying docs scaffolding -> $target/docs/"
-  # Replace only the paths we own. Consumer-owned dirs like docs/prds/ and
-  # docs/adrs/ are deliberately untouched, even on --force.
-  rm -f "$target/docs/glossary.md" "$target/docs/discovery-qa.md"
-  rm -rf "$target/docs/templates"
-  mkdir -p "$target/docs/templates"
-  cp "$REPO_ROOT/docs/glossary.md"     "$target/docs/glossary.md"
-  cp "$REPO_ROOT/docs/discovery-qa.md" "$target/docs/discovery-qa.md"
-  cp -R "$REPO_ROOT/docs/templates/." "$target/docs/templates/"
+  # Enumerate every docs/ path committed at HEAD and copy each into the
+  # project. Consumer-owned dirs like docs/prds/ and docs/adrs/ are not in
+  # HEAD's docs/ tree, so they are never touched — even on --force.
+  while IFS= read -r f; do
+    rm -f "$target/$f"
+    mkdir -p "$(dirname "$target/$f")"
+    cp "$REPO_ROOT/$f" "$target/$f"
+  done < <(git -C "$REPO_ROOT" ls-tree -r --name-only HEAD -- docs)
 
   local sha
   sha="$(git -C "$REPO_ROOT" rev-parse HEAD)"
