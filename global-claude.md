@@ -33,6 +33,8 @@ All substantial changes should map to a tracked work item (GitHub Issue, Jira, L
 - Whether user-visible behavior, schemas, APIs, or contracts change
 - Whether tests, documentation, or configuration must be updated
 - Whether security, secrets, or deployment behavior is involved
+- What can fail and how: the error conditions to handle, and what happens if an external dependency is slow, rate-limited, or down
+- Whether the operation is long-running and should be backgrounded rather than blocking a request
 
 ---
 
@@ -126,6 +128,18 @@ Resolve conflicts in this order:
 5. General defaults
 
 When conflicts cannot be resolved from this order, ask the user which takes priority.
+
+---
+
+## Third-Party Integrations
+
+When code calls an external API or service:
+
+- **Set a timeout on every outbound call** — never let a request hang indefinitely.
+- **Retry transient failures with exponential backoff**, and **handle rate limiting (HTTP 429)** explicitly rather than treating it as a generic error.
+- **Degrade gracefully** — a non-critical dependency being slow or down should not fail the whole operation. Cache responses where appropriate.
+- **Validate required API keys and configuration at startup**, not on first use, so misconfiguration fails fast and visibly.
+- **Log outbound calls** (never the secrets) for debugging, and monitor cost/usage for metered APIs.
 
 ---
 
