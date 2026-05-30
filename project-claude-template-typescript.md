@@ -51,6 +51,7 @@ If the scope is unclear, ask the user once: *"Is this a focused fix/feature or a
 - **Naming**: camelCase for variables/functions, PascalCase for types/components, kebab-case for files
 - Avoid `any` — use `unknown` and narrow, or define proper types
 - Underscore prefix (`_var`) for intentionally unused parameters only
+- **Pre-commit:** if the project uses Husky + lint-staged, it runs Prettier (and lint) on staged files automatically — let it run; don't bypass with `git commit --no-verify`
 
 ---
 
@@ -63,7 +64,13 @@ Before marking any change complete, run:
 docker compose exec backend npx tsc --noEmit
 docker compose exec frontend npx tsc -b
 ```
-Both must exit 0. If there are pre-existing errors in files you did not touch, flag them to the user.
+For an npm-workspace monorepo, type-check each workspace's project explicitly:
+```bash
+npx tsc --noEmit --project apps/backend/tsconfig.json
+npx tsc --noEmit --project apps/frontend/tsconfig.json
+npx tsc --noEmit --project packages/shared/tsconfig.json
+```
+Both must exit 0. If there are pre-existing errors in files you did not touch, flag them to the user. Type errors slip through dev and tests silently and only surface in CI — catch them locally **before pushing** to avoid the round-trip.
 
 ---
 
@@ -83,7 +90,7 @@ Both must exit 0. If there are pre-existing errors in files you did not touch, f
   - Raw SQL bypasses type safety and breaks on schema changes
 - Run migrations inside the container: `docker compose exec backend npx prisma migrate dev --name description`
 - After schema changes, rebuild: `docker compose up -d --build`
-- **NEVER reset or wipe the database without explicit user permission** — `prisma migrate reset`, `prisma db push --force-reset`, or any command that drops tables is FORBIDDEN unless the user explicitly asks
+- **NEVER reset or wipe the database without explicit user permission** — `prisma migrate reset`, `prisma db push --force-reset`, or any command that drops tables is FORBIDDEN unless the user explicitly asks. If a migration fails or Prisma prompts for a reset, **STOP and ask** before proceeding — data loss is painful to recover from
 
 ---
 
@@ -100,6 +107,10 @@ Both must exit 0. If there are pre-existing errors in files you did not touch, f
 4. `express.json()` and `express.urlencoded()`
 5. Request logging
 6. Routes
+
+**If the project uses Stripe webhooks or CSRF protection:**
+- `express.json()` must **skip the Stripe webhook route** — webhook signature verification needs the raw request body.
+- CSRF middleware must **skip webhook and auth routes** (they authenticate by signature/token, not session cookie).
 
 ---
 
