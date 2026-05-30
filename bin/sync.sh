@@ -2,7 +2,7 @@
 # bin/sync.sh — bootstrap projects from this template and detect drift.
 #
 # Subcommands:
-#   init <project-path> --stack=<typescript|python|go> [--force]
+#   init <project-path> --stack=<typescript|python|go|rust> [--force]
 #       Copy .github/ and the chosen stack template into the project.
 #       Writes .sdlc-template-version with the current template repo HEAD.
 #
@@ -35,7 +35,7 @@ usage() {
 Usage: $(basename "$0") <subcommand> [args]
 
 Subcommands:
-  init <project-path> --stack=<typescript|python|go> [--force]
+  init <project-path> --stack=<typescript|python|go|rust> [--force]
       Bootstrap a project from this template.
 
   check <project-path> [--diff]
@@ -102,7 +102,7 @@ cmd_init() {
   done
 
   [[ -n "$target" ]] || die "init requires a project path"
-  [[ -n "$stack"  ]] || die "init requires --stack=<typescript|python|go>"
+  [[ -n "$stack"  ]] || die "init requires --stack=<typescript|python|go|rust>"
   [[ -d "$target" ]] || die "target directory does not exist: $target"
 
   local stack_template="$REPO_ROOT/project-claude-template-${stack}.md"
