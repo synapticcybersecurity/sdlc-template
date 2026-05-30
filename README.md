@@ -63,7 +63,7 @@ Use `bin/sync.sh init` to bootstrap a project. It copies in the GitHub workflow 
 
 ```bash
 ~/Projects/sdlc_template/bin/sync.sh init /path/to/your-project --stack=typescript
-# stacks: typescript | python | go | rust
+# stacks: typescript | python | go | rust | ansible
 ```
 
 After bootstrap, the project contains:
@@ -123,6 +123,7 @@ Per-file actions are printed: `UPDATED`, `ADDED`, `REMOVED`, `UNCHANGED`, `SKIPP
 | `project-claude-template-python.md` | Per-project template for Python + uv + Docker projects |
 | `project-claude-template-go.md` | Per-project template for Go + Docker projects |
 | `project-claude-template-rust.md` | Per-project template for Rust (Cargo workspace) + Docker projects |
+| `project-claude-template-ansible.md` | Per-project template for Ansible / infrastructure repos (overrides global testing + ops-verification rules) |
 | `.github/ISSUE_TEMPLATE/` | GitHub issue templates (bug, feature, refactor, security, initiative, epic, story, task) |
 | `.github/pull_request_template.md` | GitHub PR template |
 | `docs/glossary.md` | Work-tracking vocabulary (Initiative / Epic / Story / Task) and label conventions |
