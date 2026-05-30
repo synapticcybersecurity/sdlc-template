@@ -52,6 +52,7 @@ Types: feat, fix, refactor, docs, test, chore, build, ci, security, perf
 - Reference issues: `feat: Add email notifications (#10)`
 - Use `Closes #X` in commit body to auto-close issues
 - Keep commits logically grouped; avoid mixing unrelated edits
+- No AI attribution: never add `Co-Authored-By`, "Generated with Claude Code", or similar attribution lines to commits or PRs
 
 **Pull Requests must include:**
 - What changed and why
