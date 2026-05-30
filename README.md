@@ -101,8 +101,18 @@ Output tags:
 - `DRIFT … local-edits` — project changed the file since bootstrap
 - `DRIFT … upstream-newer` — template changed the file since bootstrap (you may want to update)
 - `MISSING` — template has the file, project does not
+- `REMOVED-UPSTREAM` — template deleted the file since bootstrap, but the project still carries it
 
-Limitation: files deleted from the template upstream are not currently flagged.
+### Updating a Bootstrapped Project
+
+`bin/sync.sh update` re-syncs a project to the current template HEAD. Files with no local edits are updated in place; files the project has edited (almost always `CLAUDE.md`, which carries the Project Architecture section) are left untouched and reported for manual merge. Files deleted upstream are removed if the project hasn't edited them. The `.sdlc-template-version` stamp is rewritten to the new HEAD.
+
+```bash
+~/Projects/sdlc_template/bin/sync.sh update /path/to/your-project
+~/Projects/sdlc_template/bin/sync.sh update /path/to/your-project --force   # overwrite local edits too
+```
+
+Per-file actions are printed: `UPDATED`, `ADDED`, `REMOVED`, `UNCHANGED`, `SKIPPED` (local edits, left alone), `OVERWRITTEN` (`--force`), `KEPT` (upstream-deleted but locally edited). Run `git diff` in the project afterward to review before committing. A typical loop is `check` to see what drifted, then `update` to pull it in.
 
 ## What's in This Repo
 
@@ -160,6 +170,17 @@ The [`examples/`](examples/) directory contains a worked example of a small prod
 - [`examples/adrs/001-use-flat-file-cache.md`](examples/adrs/001-use-flat-file-cache.md) — the first ADR written during implementation: flat JSON file vs SQLite for the cache
 
 These are deliberately *not* copied into bootstrapped projects (`sync.sh` ignores anything outside `.github/` and `docs/`). They live here as reference material for someone learning the system. The PRD is a complete fill-in of `docs/templates/prd-template.md`; the ADR is a complete fill-in of `docs/templates/adr-template.md`.
+
+## Development
+
+The only executable logic in this repo is `bin/sync.sh`, which has a [bats](https://github.com/bats-core/bats-core) test suite under `test/`. bats-core is vendored as a git submodule, so after cloning:
+
+```bash
+git submodule update --init   # fetches test/bats
+make test                     # or: ./test/bats/bin/bats test/
+```
+
+Each test builds a self-contained throwaway template repo, so the suite never touches your real history. If you change `sync.sh`, add or update the corresponding tests before committing.
 
 ## Design Principles
 
