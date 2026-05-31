@@ -87,6 +87,22 @@ After bootstrap, the project contains:
 
 After bootstrap, edit the project's `CLAUDE.md` and fill in the **Project Architecture** section at the bottom — application type, key directories, ports, and key decisions.
 
+### Adopting in an Existing Project
+
+`init` is for greenfield projects — it refuses to overwrite existing files. For a project that already exists (and already has its own `CLAUDE.md` you want to keep), use `adopt` instead:
+
+```bash
+~/Projects/sdlc_template/bin/sync.sh adopt /path/to/existing-project --stack=typescript
+```
+
+`adopt` is **additive and non-destructive**:
+
+- Copies the `.github/` issue+PR templates and `docs/` scaffolding, but **keeps any file the project already has** (reported `KEPT`); only missing files are `ADDED`. Pass `--force` to overwrite existing scaffolding files.
+- **Never overwrites the project's `CLAUDE.md`** — even with `--force`. If the project has no `CLAUDE.md`, one is created from the stack template; otherwise the bespoke file is left untouched.
+- Writes `.sdlc-template-version`, so `check` and `update` work afterward.
+
+After adopting, the project's `CLAUDE.md` will show as `local-edits` under `check` (expected — it's your own file). To make forks use the work-tracking system, add a Work Tracking section to it pointing at the new `docs/` scaffolding.
+
 ### Detecting Drift in a Bootstrapped Project
 
 `bin/sync.sh check` compares a project's templated files against the template at the SHA it was bootstrapped from and against current HEAD. It reports local edits and upstream changes separately, exits non-zero on any drift, and accepts `--diff` to show unified diffs.

@@ -99,6 +99,69 @@ bootstrap() {
 }
 
 # ---------------------------------------------------------------------------
+# adopt
+# ---------------------------------------------------------------------------
+
+@test "adopt scaffolds an empty project and writes a stamp" {
+  run "$SYNC" adopt "$PROJECT" --stack=typescript
+  [ "$status" -eq 0 ]
+  [ -f "$PROJECT/.github/pull_request_template.md" ]
+  [ -f "$PROJECT/docs/glossary.md" ]
+  [ -f "$PROJECT/CLAUDE.md" ]
+  [ -f "$PROJECT/.sdlc-template-version" ]
+  # with no pre-existing CLAUDE.md, adopt creates it from the stack template
+  run cat "$PROJECT/CLAUDE.md"
+  [[ "$output" == *"typescript template"* ]]
+  # a freshly adopted project is in sync
+  run "$SYNC" check "$PROJECT"
+  [ "$status" -eq 0 ]
+}
+
+@test "adopt preserves an existing bespoke CLAUDE.md" {
+  echo "bespoke project rules" > "$PROJECT/CLAUDE.md"
+  run "$SYNC" adopt "$PROJECT" --stack=typescript
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"KEPT"* ]]
+  run cat "$PROJECT/CLAUDE.md"
+  [[ "$output" == *"bespoke project rules"* ]]
+  [[ "$output" != *"typescript template"* ]]
+  # scaffolding was still added
+  [ -f "$PROJECT/docs/glossary.md" ]
+}
+
+@test "adopt keeps an existing scaffolding file by default" {
+  mkdir -p "$PROJECT/.github"
+  echo "my own PR template" > "$PROJECT/.github/pull_request_template.md"
+  run "$SYNC" adopt "$PROJECT" --stack=typescript
+  [ "$status" -eq 0 ]
+  run cat "$PROJECT/.github/pull_request_template.md"
+  [[ "$output" == *"my own PR template"* ]]
+}
+
+@test "adopt --force overwrites scaffolding but still preserves CLAUDE.md" {
+  echo "bespoke project rules" > "$PROJECT/CLAUDE.md"
+  mkdir -p "$PROJECT/.github"
+  echo "my own PR template" > "$PROJECT/.github/pull_request_template.md"
+  run "$SYNC" adopt "$PROJECT" --stack=typescript --force
+  [ "$status" -eq 0 ]
+  # scaffolding file replaced by the template's
+  run cat "$PROJECT/.github/pull_request_template.md"
+  [[ "$output" == *"PR template"* ]]
+  [[ "$output" != *"my own PR template"* ]]
+  # CLAUDE.md is never overwritten, even with --force
+  run cat "$PROJECT/CLAUDE.md"
+  [[ "$output" == *"bespoke project rules"* ]]
+}
+
+@test "adopt refuses to re-stamp an already-adopted project without --force" {
+  run "$SYNC" adopt "$PROJECT" --stack=typescript
+  [ "$status" -eq 0 ]
+  run "$SYNC" adopt "$PROJECT" --stack=typescript
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"already bootstrapped/adopted"* ]]
+}
+
+# ---------------------------------------------------------------------------
 # check
 # ---------------------------------------------------------------------------
 
