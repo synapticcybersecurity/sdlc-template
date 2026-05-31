@@ -108,6 +108,22 @@ Rust makes error handling explicit. These rules prevent the common mistakes:
 
 ---
 
+## Security
+
+For code handling auth, crypto, secrets, or untrusted input:
+
+- **Treat integer overflow as a bug.** Use checked/saturating/wrapping arithmetic deliberately on any value derived from input; keep debug overflow checks enabled.
+- **Compare secrets in constant time.** Tokens, MACs, auth tags, and password-hash outputs go through `subtle`'s `ConstantTimeEq` — never `==`.
+- **Zero sensitive memory.** Wrap keys, passwords, and derived key material in `zeroize` / `ZeroizeOnDrop`; avoid leaving plaintext behind `String`/`Vec` reallocations.
+- **Never hand-roll crypto.** Use vetted crates; draw randomness from a CSPRNG (`getrandom` / `OsRng`); never reuse a nonce; bind context with AAD where the primitive supports it.
+- **Validate and bound untrusted input at the boundary** — sizes, counts, lengths, recursion depth — to resist DoS and resource exhaustion.
+- **Never log secrets or plaintext**, and keep them out of error messages.
+- **No panics on untrusted-input paths.** Beyond the Error Handling rule, also avoid `unreachable!`/`todo!` and bare slice indexing on anything input-influenced — return a `Result`.
+
+> Related rules elsewhere in this file: **Error Handling** (no `unwrap`/`expect`/`panic!` in library code), **Rust-Specific Rules** (`#![forbid(unsafe_code)]`), and **Validation Commands** (the `clippy -D warnings` / `fmt --check` / `cargo deny` / `cargo audit` gates — wire them into CI, not ad hoc).
+
+---
+
 ## Testing
 
 - **Framework:** built-in `cargo test`. Add `cargo-nextest` only if the project already uses it (faster runner, nicer output).
