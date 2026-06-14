@@ -76,10 +76,12 @@ require_clean_template_repo() {
 
 # Echo the repo-relative paths of every templated file present at a git ref:
 # everything under .github/ and docs/, plus the stack template at repo root.
+# .github/workflows/ is EXCLUDED — those are template-internal CI (e.g. the
+# hooks bats suite) and must never propagate into consumer projects.
 # Usage: templated_files_at_ref <ref> <stack_template_rel>
 templated_files_at_ref() {
   local ref="$1" stack_rel="$2"
-  git -C "$REPO_ROOT" ls-tree -r --name-only "$ref" -- .github docs | sort
+  git -C "$REPO_ROOT" ls-tree -r --name-only "$ref" -- .github docs | awk '!/^\.github\/workflows\//' | sort
   if git -C "$REPO_ROOT" cat-file -e "$ref:$stack_rel" 2>/dev/null; then
     echo "$stack_rel"
   fi
@@ -135,6 +137,9 @@ cmd_init() {
   echo "Copying .github/ -> $target/.github/"
   rm -rf "$target/.github"
   cp -R "$REPO_ROOT/.github" "$target/.github"
+  # Workflows are template-internal tooling (e.g. the hooks bats suite) and
+  # must not leak into consumer projects.
+  rm -rf "$target/.github/workflows"
 
   echo "Copying $(basename "$stack_template") -> $target/CLAUDE.md"
   cp "$stack_template" "$target/CLAUDE.md"
@@ -445,7 +450,7 @@ cmd_adopt() {
       cp "$REPO_ROOT/$f" "$proj"
       printf '%-9s %s\n' "ADDED" "$f"
     fi
-  done < <(git -C "$REPO_ROOT" ls-tree -r --name-only HEAD -- .github docs)
+  done < <(git -C "$REPO_ROOT" ls-tree -r --name-only HEAD -- .github docs | awk '!/^\.github\/workflows\//')
 
   # CLAUDE.md is the project's own — adopt never overwrites it (even with
   # --force). Create it from the stack template only if the project has none.

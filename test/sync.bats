@@ -81,6 +81,17 @@ bootstrap() {
   [[ "$output" == *"use --force"* ]]
 }
 
+@test "init does not propagate .github/workflows to the project" {
+  mkdir -p "$TEMPLATE/.github/workflows"
+  echo "ci" > "$TEMPLATE/.github/workflows/ci.yml"
+  template_commit "add template-internal workflow"
+  bootstrap
+  # workflows are template-internal tooling and must not leak to consumers
+  [ ! -e "$PROJECT/.github/workflows" ]
+  # but the rest of .github/ is still copied
+  [ -f "$PROJECT/.github/ISSUE_TEMPLATE/bug.md" ]
+}
+
 @test "init --force re-bootstraps over an existing project" {
   bootstrap
   run "$SYNC" init "$PROJECT" --stack=typescript --force

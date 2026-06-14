@@ -1,0 +1,27 @@
+name: hooks + sync tests
+
+# Template-internal CI. NOT propagated to consumer projects (sync.sh excludes
+# .github/workflows/). Runs the bats suites for the enforcement hooks and the
+# sync tool.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  bats:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive      # test/bats is a submodule
+      - name: Show tool versions
+        run: |
+          jq --version
+          git --version
+          bash --version | head -1
+      - name: Run hooks bats suite
+        run: ./test/bats/bin/bats test/hooks.bats
+      - name: Run sync bats suite
+        run: ./test/bats/bin/bats test/sync.bats
