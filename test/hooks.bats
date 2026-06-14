@@ -184,6 +184,41 @@ cmd()  { printf '%s' "$(bash_json "$1" "$2")" | "$HOOKS/pre-bash.sh"; }
   [ -z "$output" ]
 }
 
+@test "allowlist mode: a repo NOT in shared_repos is allowed in its main checkout" {
+  jq '.worktree_guard.shared_repos = ["some-other-repo"]' "$SDLC_HOOKS_CONFIG" > "$SDLC_HOOKS_CONFIG.t" && mv "$SDLC_HOOKS_CONFIG.t" "$SDLC_HOOKS_CONFIG"
+  run edit "$REPO/foo.txt"
+  [ -z "$output" ]
+}
+
+@test "allowlist mode: a repo IN shared_repos is denied in its main checkout" {
+  jq '.worktree_guard.shared_repos = ["repo"]' "$SDLC_HOOKS_CONFIG" > "$SDLC_HOOKS_CONFIG.t" && mv "$SDLC_HOOKS_CONFIG.t" "$SDLC_HOOKS_CONFIG"
+  run edit "$REPO/foo.txt"
+  [[ -n "$output" ]]
+}
+
+# ---------------------------------------------------------------------------
+# git-native pre-commit (catches a human's manual commit too)
+# ---------------------------------------------------------------------------
+
+@test "git pre-commit blocks a staged secret" {
+  printf 'SECRET=1\n' > "$WT/.env"; git -C "$WT" add -f .env
+  run bash -c 'cd "$1" && "$2/git/pre-commit"' _ "$WT" "$HOOKS"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *".env"* ]]
+}
+
+@test "git pre-commit allows a clean commit" {
+  printf 'ok\n' > "$WT/notes.txt"; git -C "$WT" add notes.txt
+  run bash -c 'cd "$1" && "$2/git/pre-commit"' _ "$WT" "$HOOKS"
+  [ "$status" -eq 0 ]
+}
+
+@test "git pre-commit allows a secret with the bypass env" {
+  printf 'SECRET=1\n' > "$WT/.env"; git -C "$WT" add -f .env
+  run bash -c 'cd "$1" && CLAUDE_ALLOW_SECRET_COMMIT=1 "$2/git/pre-commit"' _ "$WT" "$HOOKS"
+  [ "$status" -eq 0 ]
+}
+
 # ---------------------------------------------------------------------------
 # fail-open
 # ---------------------------------------------------------------------------

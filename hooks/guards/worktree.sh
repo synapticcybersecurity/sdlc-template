@@ -1,17 +1,20 @@
 # hooks/guards/worktree.sh — enforce worktree-per-task on shared checkouts.
 #
-# guard_worktree:        blocks Edit/Write/NotebookEdit to a repo's MAIN
-#                        checkout under projects_root (use a linked worktree).
-# guard_commit_in_main:  blocks `git commit` run from a MAIN checkout (so work
-#                        can't land on the shared tree's branch). The 2026-06-14
-#                        incident — feature commits swept onto main in the shared
-#                        ~/Projects/Infra checkout — is exactly this.
+# guard_worktree:        blocks Edit/Write/NotebookEdit to a guarded repo's
+#                        MAIN checkout (use a linked worktree).
+# guard_commit_in_main:  blocks `git commit` run against a guarded repo's MAIN
+#                        checkout (so work can't land on the shared tree's
+#                        branch). The 2026-06-14 incident — feature commits
+#                        swept onto main in the shared ~/Projects/Infra
+#                        checkout — is exactly this.
 #
-# Requires lib/common.sh sourced first.
+# "Guarded" = under projects_root AND in scope per repo_in_scope() (which
+# honors .worktree_guard.shared_repos allowlist / exempt_repos). Requires
+# lib/common.sh sourced first.
 
 # Recipe shown in deny reasons.
 _wt_recipe() {
-  local repo="$1" name; name="$(basename "$repo")"
+  local repo="$1"
   printf 'git -C %q worktree add %q-<task> -b <type>/<name> origin/main' "$repo" "$repo"
 }
 
@@ -32,13 +35,7 @@ guard_worktree() {
   local dir; dir="$(deepest_existing_dir "$fp")"
   local repo; repo="$(repo_toplevel "$dir")"
   [ -z "$repo" ] && return 0                    # not a git repo → can't worktree it
-
-  # Exempt repos (by basename) opt out entirely.
-  local name; name="$(basename "$repo")"
-  local ex
-  while IFS= read -r ex; do
-    [ -n "$ex" ] && [ "$ex" = "$name" ] && return 0
-  done < <(config_array '.worktree_guard.exempt_repos')
+  repo_in_scope "$repo" || return 0
 
   if git_main_worktree "$dir"; then
     deny "Refusing to edit '$fp' in the MAIN checkout of $repo. This checkout can be shared by concurrent sessions; edit in a dedicated git worktree instead:
@@ -57,7 +54,6 @@ guard_commit_in_main() {
 
   local cmd; cmd="$(hook_field '.tool_input.command')"
   [ -z "$cmd" ] && return 0
-  # Only care about `git commit` (the operation that writes history).
   is_git_commit "$cmd" || return 0
 
   local bypass; bypass="$(config_get '.worktree_guard.bypass_env' 'CLAUDE_ALLOW_MAIN_EDITS')"
@@ -76,12 +72,7 @@ guard_commit_in_main() {
 
   local repo; repo="$(repo_toplevel "$gdir")"
   [ -z "$repo" ] && return 0
-
-  local name; name="$(basename "$repo")"
-  local ex
-  while IFS= read -r ex; do
-    [ -n "$ex" ] && [ "$ex" = "$name" ] && return 0
-  done < <(config_array '.worktree_guard.exempt_repos')
+  repo_in_scope "$repo" || return 0
 
   if git_main_worktree "$gdir"; then
     deny "Refusing to 'git commit' into the MAIN checkout of $repo. Commit from a dedicated worktree so work can't land on the shared tree's branch:

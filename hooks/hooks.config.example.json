@@ -3,8 +3,10 @@
 
   "worktree_guard": {
     "//": "Block edits (and commits) in a repo's MAIN checkout under projects_root; force a linked git worktree per task.",
+    "//scope": "If shared_repos is NON-EMPTY, ONLY those repos are guarded (allowlist mode — match by basename or absolute path). This is the right setting if you only run concurrent sessions in a few checkouts (e.g. just Infra). Leave shared_repos empty to guard ALL repos under projects_root. exempt_repos always wins.",
     "enabled": true,
     "projects_root": "/Users/CHANGEME/Projects",
+    "shared_repos": ["Infra"],
     "exempt_repos": [],
     "block_commits_in_main": true,
     "bypass_env": "CLAUDE_ALLOW_MAIN_EDITS"

@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+# bin/cw — "claude worktree": create a per-task git worktree off a (usually
+# shared) checkout and launch Claude inside it with an ISOLATED gh config, so
+# the two shared-state hazards on a multi-session machine are handled at once:
+#   1. shared git HEAD/index  -> each task gets its own worktree
+#   2. shared gh active account -> each session gets its own GH_CONFIG_DIR
+#      (so `gh auth switch` in one session can't leak into another)
+#
+# Usage:
+#   cw <branch> [base-ref]        # run from inside the repo
+#   e.g.  cw feature/42-widget            (base defaults to origin/main)
+#         cw fix/packer-thing origin/dev
+#
+# The worktree is created as <repo>-<leaf>, where <leaf> is the last path
+# component of the branch. Remove it when done:
+#   git -C <repo> worktree remove <repo>-<leaf>
+set -euo pipefail
+
+[ $# -ge 1 ] || { echo "usage: cw <branch> [base-ref] [-- claude args…]" >&2; exit 2; }
+branch="$1"; shift
+base="origin/main"
+if [ $# -ge 1 ] && [ "$1" != "--" ] && [ "${1#-}" = "$1" ]; then base="$1"; shift; fi
+[ "${1:-}" = "--" ] && shift          # remaining args (if any) pass through to claude
+
+repo="$(git rev-parse --show-toplevel 2>/dev/null)" || { echo "cw: not inside a git repo" >&2; exit 1; }
+# Operate from the main checkout even if invoked from a worktree.
+common="$(cd "$repo" && cd "$(git rev-parse --git-common-dir)" && pwd -P)"
+repo_main="$(dirname "$common")"
+
+leaf="${branch##*/}"
+wt="${repo_main}-${leaf}"
+[ -e "$wt" ] && { echo "cw: $wt already exists" >&2; exit 1; }
+
+echo "cw: fetching origin…"
+git -C "$repo_main" fetch origin --quiet || true
+echo "cw: creating worktree $wt  (branch $branch off $base)"
+git -C "$repo_main" worktree add "$wt" -b "$branch" "$base"
+
+# Per-session isolated gh config (copy current auth in, then isolate).
+ghdir="$(mktemp -d "${TMPDIR:-/tmp}/cw-gh.XXXXXX")"
+if [ -d "${HOME}/.config/gh" ]; then cp -R "${HOME}/.config/gh/." "$ghdir/" 2>/dev/null || true; fi
+
+echo "cw: launching Claude in $wt  (GH_CONFIG_DIR isolated)"
+cd "$wt"
+GH_CONFIG_DIR="$ghdir" \
+OBJC_DISABLE_INITIALIZE_FORK_SAFETY="YES" \
+no_proxy="*" \
+  exec claude "$@"

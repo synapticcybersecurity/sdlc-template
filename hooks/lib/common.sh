@@ -98,6 +98,31 @@ glob_match() {
   [[ "$base" == $pat ]]
 }
 
+# repo_in_scope <repo-toplevel> — true if the worktree guard should apply to
+# this repo. Scoping model:
+#   - .worktree_guard.exempt_repos always wins (never guarded).
+#   - if .worktree_guard.shared_repos is NON-EMPTY, only those repos are guarded
+#     (allowlist mode — match by basename OR absolute path).
+#   - otherwise, ALL repos under projects_root are guarded (broad mode).
+# Match a repo by its basename or its absolute toplevel path.
+repo_in_scope() {
+  local repo="$1" name; name="$(basename "$repo")"
+  local item
+  while IFS= read -r item; do
+    [ -n "$item" ] && { [ "$item" = "$name" ] || [ "$item" = "$repo" ]; } && return 1
+  done < <(config_array '.worktree_guard.exempt_repos')
+
+  local has_shared=0
+  while IFS= read -r item; do
+    [ -z "$item" ] && continue
+    has_shared=1
+    { [ "$item" = "$name" ] || [ "$item" = "$repo" ]; } && return 0
+  done < <(config_array '.worktree_guard.shared_repos')
+
+  [ "$has_shared" -eq 1 ] && return 1   # allowlist given, this repo not in it
+  return 0                              # broad mode: all repos in scope
+}
+
 # is_git_commit <command> — true if the command runs `git ... commit` (commit
 # as the git subcommand). Handles `git commit`, `git -C dir commit`, flags, etc.
 # Avoids false positives like `git log` or `git commitfoo`.

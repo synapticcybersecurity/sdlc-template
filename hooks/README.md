@@ -61,11 +61,35 @@ is blocked — no dependence on a `<repo>-<task>` naming convention.
    block is the macOS Ansible/Pulumi fork-safety fix — drop it on Linux, and
    note `no_proxy=*` only matters behind a proxy.
 
+## Scoping the worktree guard
+
+Most people run concurrent sessions in only a few checkouts, so the guard
+supports an **allowlist**:
+
+- `worktree_guard.shared_repos` **non-empty** → only those repos are guarded
+  (match by basename or absolute path). Recommended: list just the checkouts
+  you actually share (e.g. `["Infra"]`). Every other repo stays frictionless.
+- `shared_repos` **empty** → broad mode: every repo under `projects_root` is
+  guarded, minus `exempt_repos`.
+
+The guard (and the friction of working in worktrees) only buys safety where
+concurrent sessions share a tree — so prefer the allowlist unless you genuinely
+run parallel sessions everywhere.
+
+## Companion launcher
+
+`bin/cw` creates a per-task worktree off a guarded repo **and** gives the new
+Claude session its own `GH_CONFIG_DIR`, so `gh auth switch` can't leak across
+sessions. It makes the compliant path the easy path:
+
+    cw feature/42-thing          # from inside the repo; opens Claude in <repo>-thing
+
 ## Config reference
 
 See `hooks.config.example.json`. Keys: `worktree_guard.{enabled,projects_root,
-exempt_repos[],block_commits_in_main,bypass_env}`, `gh_auth_switch.{enabled,
-bypass_env}`, `secret_commit.{enabled,deny_globs[],allow_globs[],bypass_env}`.
+shared_repos[],exempt_repos[],block_commits_in_main,bypass_env}`,
+`gh_auth_switch.{enabled,bypass_env}`,
+`secret_commit.{enabled,deny_globs[],allow_globs[],bypass_env}`.
 
 ## Known gaps
 
