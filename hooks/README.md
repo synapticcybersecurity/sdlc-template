@@ -1,0 +1,79 @@
+# sdlc hooks — harness-enforced engineering directives
+
+`PreToolUse` hooks that turn the *mechanizable* CLAUDE.md directives from
+"documented" into "the harness blocks it." Hooks are run by Claude Code itself
+(not the model), so a denial is real enforcement, not a suggestion.
+
+The logic lives here (version-controlled, bats-tested). Each machine wires it
+in once at **user scope** (`~/.claude/settings.json`) and supplies its own
+parameters via `~/.claude/sdlc-hooks.config.json`.
+
+## What it enforces
+
+| Guard | Tool(s) | Blocks |
+|-------|---------|--------|
+| **worktree** | Edit/Write/NotebookEdit | Editing a repo's **main checkout** under `projects_root` — use a linked `git worktree` instead. |
+| **commit-in-main** | Bash | `git commit` run from a **main checkout** — so work can't land on the shared tree's branch (the 2026-06-14 incident). |
+| **gh-auth-switch** | Bash | `gh auth switch` — flips the global, session-shared gh account. Use a scoped token. |
+| **secret-commit** | Bash | `git commit` that records `.env` / `*.pem` / `*.key` / `credentials.json` / … |
+
+Not enforced here (already native or not mechanizable): no-AI-attribution is
+handled by settings.json `attribution`; process directives (one-concern-per-
+change, finish-the-unit, run-tests-before-done, …) stay as prose in CLAUDE.md.
+
+## How a guard decides "main checkout vs worktree"
+
+By git's own truth, not directory naming: in a repo's **main** worktree the
+absolute git dir equals the common git dir; in a **linked** worktree they
+differ. So any `git worktree add` sibling is allowed and the primary checkout
+is blocked — no dependence on a `<repo>-<task>` naming convention.
+
+## Design guarantees
+
+- **Fail-open.** Missing `jq`, unreadable config, or any git error → the tool
+  call is allowed. A guard bug must never brick a session.
+- **Bypass per guard.** Set the guard's `bypass_env` (e.g. `CLAUDE_ALLOW_MAIN_EDITS=1`)
+  before launching Claude, or add it to settings.json `env`, to override.
+- **Scoped matchers.** Bash guards never run on edit events and vice-versa.
+
+## Install (per machine)
+
+1. Copy the config and edit `projects_root`:
+   ```bash
+   cp ~/Projects/sdlc_template/hooks/hooks.config.example.json ~/.claude/sdlc-hooks.config.json
+   # edit projects_root to your home Projects dir
+   ```
+2. Add to `~/.claude/settings.json` (merges with existing `permissions`/`attribution`):
+   ```json
+   {
+     "hooks": {
+       "PreToolUse": [
+         { "matcher": "Edit|Write|NotebookEdit",
+           "hooks": [{ "type": "command", "command": "/ABS/PATH/sdlc_template/hooks/pre-edit.sh" }] },
+         { "matcher": "Bash",
+           "hooks": [{ "type": "command", "command": "/ABS/PATH/sdlc_template/hooks/pre-bash.sh" }] }
+       ]
+     },
+     "env": { "OBJC_DISABLE_INITIALIZE_FORK_SAFETY": "YES", "no_proxy": "*" }
+   }
+   ```
+   The `command` field needs an **absolute** path (no `~` expansion). The `env`
+   block is the macOS Ansible/Pulumi fork-safety fix — drop it on Linux, and
+   note `no_proxy=*` only matters behind a proxy.
+
+## Config reference
+
+See `hooks.config.example.json`. Keys: `worktree_guard.{enabled,projects_root,
+exempt_repos[],block_commits_in_main,bypass_env}`, `gh_auth_switch.{enabled,
+bypass_env}`, `secret_commit.{enabled,deny_globs[],allow_globs[],bypass_env}`.
+
+## Known gaps
+
+- Edit guard covers Edit/Write/NotebookEdit, not arbitrary Bash file writes
+  (`sed -i`, `>`). Defense-in-depth, not airtight.
+- Secret guard catches Claude's commits, not a human's manual `git commit`
+  (a git-native `core.hooksPath` pre-commit would; future hardening).
+
+## Tests
+
+`cd ~/Projects/sdlc_template && ./test/bats/bin/bats test/hooks.bats`

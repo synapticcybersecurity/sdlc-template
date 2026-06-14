@@ -1,0 +1,26 @@
+{
+  "//": "Machine-specific config for the sdlc PreToolUse hooks. Copy to ~/.claude/sdlc-hooks.config.json and edit. Paths and which checkouts are 'shared' differ per machine, so this is NOT committed — only this example is.",
+
+  "worktree_guard": {
+    "//": "Block edits (and commits) in a repo's MAIN checkout under projects_root; force a linked git worktree per task.",
+    "enabled": true,
+    "projects_root": "/Users/CHANGEME/Projects",
+    "exempt_repos": [],
+    "block_commits_in_main": true,
+    "bypass_env": "CLAUDE_ALLOW_MAIN_EDITS"
+  },
+
+  "gh_auth_switch": {
+    "//": "Block `gh auth switch` (flips global, shared gh account). Use a scoped token instead.",
+    "enabled": true,
+    "bypass_env": "CLAUDE_ALLOW_GH_SWITCH"
+  },
+
+  "secret_commit": {
+    "//": "Block `git commit` that records secret files. allow_globs win over deny_globs. Encrypted ansible vault.yml is intentionally committable, so it is not denied.",
+    "enabled": true,
+    "deny_globs": [".env", ".env.*", "*.pem", "*.key", "credentials.json", "id_rsa", "id_dsa", "*.p12", "*.pfx"],
+    "allow_globs": [".env.example", ".env.sample", ".env.template"],
+    "bypass_env": "CLAUDE_ALLOW_SECRET_COMMIT"
+  }
+}
