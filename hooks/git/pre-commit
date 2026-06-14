@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+# hooks/git/pre-commit — git-native secret-commit guard.
+#
+# Complements the PreToolUse secret-commit hook (which only sees Claude's
+# commits) by also blocking a HUMAN's manual `git commit` of secret files.
+# Wire it for a repo (or globally) with:
+#
+#   git config core.hooksPath /ABS/PATH/sdlc_template/hooks/git
+#
+# Reuses the same deny/allow globs from ~/.claude/sdlc-hooks.config.json.
+# Fail-open on tooling errors; override one commit with CLAUDE_ALLOW_SECRET_COMMIT=1.
+set -uo pipefail
+
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=/dev/null
+source "$HERE/../lib/common.sh" 2>/dev/null || exit 0
+require_jq || exit 0
+
+[ "$(config_get '.secret_commit.enabled' 'true')" = "true" ] || exit 0
+[ -n "${CLAUDE_ALLOW_SECRET_COMMIT:-}" ] && exit 0
+
+files="$(git diff --cached --name-only --diff-filter=ACM 2>/dev/null)"
+[ -z "${files//[[:space:]]/}" ] && exit 0
+
+declare -a deny_globs=() allow_globs=()
+while IFS= read -r g; do [ -n "$g" ] && deny_globs+=("$g"); done < <(config_array '.secret_commit.deny_globs')
+while IFS= read -r g; do [ -n "$g" ] && allow_globs+=("$g"); done < <(config_array '.secret_commit.allow_globs')
+[ "${#deny_globs[@]}" -eq 0 ] && deny_globs=(".env" ".env.*" "*.pem" "*.key" "credentials.json" "id_rsa" "id_dsa" "*.p12" "*.pfx")
+[ "${#allow_globs[@]}" -eq 0 ] && allow_globs=(".env.example" ".env.sample" ".env.template")
+
+offenders=""
+while IFS= read -r f; do
+  [ -z "$f" ] && continue
+  base="$(basename "$f")"
+  allowed=0
+  for p in "${allow_globs[@]}"; do glob_match "$base" "$p" && { allowed=1; break; }; done
+  [ "$allowed" -eq 1 ] && continue
+  for p in "${deny_globs[@]}"; do glob_match "$base" "$p" && { offenders="$offenders  $f"$'\n'; break; }; done
+done <<< "$files"
+
+if [ -n "$offenders" ]; then
+  {
+    echo "pre-commit: refusing to commit — staged files look like secrets:"
+    printf '%s' "$offenders"
+    echo "Secrets must never be committed. Remove them, or set CLAUDE_ALLOW_SECRET_COMMIT=1 to override."
+  } >&2
+  exit 1
+fi
+exit 0

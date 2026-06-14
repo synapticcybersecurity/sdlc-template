@@ -56,6 +56,11 @@ Types: feat, fix, refactor, docs, test, chore, build, ci, security, perf
 - Keep commits logically grouped; avoid mixing unrelated edits
 - No AI attribution: never add `Co-Authored-By`, "Generated with Claude Code", or similar attribution lines to commits or PRs
 
+**Enforced by tooling** (where the sdlc hooks are installed — see `hooks/README.md`):
+- Editing or running `git commit` in a repo's **main checkout** under your projects root is blocked; work in a per-task `git worktree`. Per-session override: `CLAUDE_ALLOW_MAIN_EDITS=1`.
+- `gh auth switch` is blocked (it flips the global, session-shared account) — use a scoped token instead.
+- No-AI-attribution is enforced natively by the `attribution` setting in `settings.json`.
+
 **Pull Requests must include:**
 - What changed and why
 - Linked issue or task
@@ -86,7 +91,7 @@ If tests cannot be added or run, say so explicitly rather than implying full val
 
 ## 5. Security
 
-**Never commit:** `.env` files, API keys, secrets, passwords, `*.pem`, `*.key`, `credentials.json`
+**Never commit:** `.env` files, API keys, secrets, passwords, `*.pem`, `*.key`, `credentials.json`. Where the sdlc hooks are installed this is **enforced**: a `git commit` staging such files is blocked (override `CLAUDE_ALLOW_SECRET_COMMIT=1`).
 
 **Non-default security rules:**
 - Use least-privilege scopes for integrations, service accounts, and OAuth tokens — not admin/wildcard defaults
