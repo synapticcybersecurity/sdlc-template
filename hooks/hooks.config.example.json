@@ -18,6 +18,12 @@
     "bypass_env": "CLAUDE_ALLOW_GH_SWITCH"
   },
 
+  "ssh_guard": {
+    "//": "Block raw `ssh` commands (manual remote access). Reach managed hosts through Ansible (the `ap` wrapper) instead. Does not match ssh-keygen/ssh-add/ssh-keyscan or ~/.ssh paths.",
+    "enabled": true,
+    "bypass_env": "CLAUDE_ALLOW_SSH"
+  },
+
   "secret_commit": {
     "//": "Block `git commit` that records secret files. allow_globs win over deny_globs. Encrypted ansible vault.yml is intentionally committable, so it is not denied.",
     "enabled": true,
