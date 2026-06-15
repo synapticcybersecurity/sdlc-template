@@ -15,6 +15,7 @@ parameters via `~/.claude/sdlc-hooks.config.json`.
 | **worktree** | Edit/Write/NotebookEdit | Editing a repo's **main checkout** under `projects_root` — use a linked `git worktree` instead. |
 | **commit-in-main** | Bash | `git commit` run from a **main checkout** — so work can't land on the shared tree's branch (the 2026-06-14 incident). |
 | **gh-auth-switch** | Bash | `gh auth switch` — flips the global, session-shared gh account. Use a scoped token. |
+| **ssh** | Bash | raw `ssh` — reach managed hosts through Ansible (the `ap` wrapper), not manual SSH. |
 | **secret-commit** | Bash | `git commit` that records `.env` / `*.pem` / `*.key` / `credentials.json` / … |
 
 Not enforced here (already native or not mechanizable): no-AI-attribution is
@@ -88,7 +89,7 @@ sessions. It makes the compliant path the easy path:
 
 See `hooks.config.example.json`. Keys: `worktree_guard.{enabled,projects_root,
 shared_repos[],exempt_repos[],block_commits_in_main,bypass_env}`,
-`gh_auth_switch.{enabled,bypass_env}`,
+`gh_auth_switch.{enabled,bypass_env}`, `ssh_guard.{enabled,bypass_env}`,
 `secret_commit.{enabled,deny_globs[],allow_globs[],bypass_env}`.
 
 ## Known gaps

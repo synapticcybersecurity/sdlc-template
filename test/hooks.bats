@@ -130,6 +130,50 @@ cmd()  { printf '%s' "$(bash_json "$1" "$2")" | "$HOOKS/pre-bash.sh"; }
 }
 
 # ---------------------------------------------------------------------------
+# ssh guard
+# ---------------------------------------------------------------------------
+
+@test "raw ssh to a host is denied" {
+  run cmd "ssh root@kvm-00 'uptime'" "$WT"
+  [[ -n "$output" ]]
+  [[ "$output" == *'"permissionDecision":"deny"'* ]]
+}
+
+@test "ssh with options/flags is denied" {
+  run cmd "ssh -o ConnectTimeout=5 -i ~/.ssh/k.pub root@host 'echo hi'" "$WT"
+  [[ -n "$output" ]]
+}
+
+@test "/usr/bin/ssh (full path) is denied" {
+  run cmd "/usr/bin/ssh host 'whoami'" "$WT"
+  [[ -n "$output" ]]
+}
+
+@test "ssh-keygen / ssh-keyscan / ssh-add are allowed" {
+  run cmd "ssh-keygen -lf ~/.ssh/id.pub" "$WT"
+  [ -z "$output" ]
+  run cmd "ssh-keyscan -t ed25519 host" "$WT"
+  [ -z "$output" ]
+  run cmd "ssh-add -l" "$WT"
+  [ -z "$output" ]
+}
+
+@test "reading a ~/.ssh path is allowed (no raw ssh command)" {
+  run cmd "cat ~/.ssh/config" "$WT"
+  [ -z "$output" ]
+}
+
+@test "the ap/ansible wrapper is allowed" {
+  run cmd "ansible/bin/ap 303bpr.org prod ping.yml --limit kvm-00" "$WT"
+  [ -z "$output" ]
+}
+
+@test "ssh with bypass env is allowed" {
+  CLAUDE_ALLOW_SSH=1 run cmd "ssh root@host 'uptime'" "$WT"
+  [ -z "$output" ]
+}
+
+# ---------------------------------------------------------------------------
 # gh auth switch guard
 # ---------------------------------------------------------------------------
 
