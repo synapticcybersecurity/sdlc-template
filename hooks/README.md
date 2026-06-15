@@ -10,13 +10,13 @@ parameters via `~/.claude/sdlc-hooks.config.json`.
 
 ## What it enforces
 
-| Guard | Tool(s) | Blocks |
+| Guard | Tool(s) | Action |
 |-------|---------|--------|
-| **worktree** | Edit/Write/NotebookEdit | Editing a repo's **main checkout** under `projects_root` — use a linked `git worktree` instead. |
-| **commit-in-main** | Bash | `git commit` run from a **main checkout** — so work can't land on the shared tree's branch (the 2026-06-14 incident). |
-| **gh-auth-switch** | Bash | `gh auth switch` — flips the global, session-shared gh account. Use a scoped token. |
-| **ssh** | Bash | raw `ssh` — reach managed hosts through Ansible (the `ap` wrapper), not manual SSH. |
-| **secret-commit** | Bash | `git commit` that records `.env` / `*.pem` / `*.key` / `credentials.json` / … |
+| **worktree** | Edit/Write/NotebookEdit | **deny** — editing a repo's **main checkout** under `projects_root`; use a linked `git worktree`. |
+| **commit-in-main** | Bash | **deny** — `git commit` from a **main checkout** (so work can't land on the shared tree's branch; the 2026-06-14 incident). |
+| **gh-auth-switch** | Bash | **deny** — `gh auth switch` (flips the global, session-shared gh account). Use a scoped token. |
+| **ssh** | Bash | **ask** — raw `ssh` prompts to prefer Ansible (the `ap` wrapper); approve genuine ssh. |
+| **secret-commit** | Bash | **deny** — `git commit` recording `.env` / `*.pem` / `*.key` / `credentials.json` / … |
 
 Not enforced here (already native or not mechanizable): no-AI-attribution is
 handled by settings.json `attribution`; process directives (one-concern-per-

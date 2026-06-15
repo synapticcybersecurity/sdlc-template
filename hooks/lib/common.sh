@@ -53,6 +53,15 @@ deny() {
   exit 0
 }
 
+# ask <reason> — surface the normal permission prompt for this tool call, so
+# the user approves or denies it. Softer than deny(): the reason states the
+# preference; the user decides per-instance.
+ask() {
+  jq -nc --arg r "$1" \
+    '{hookSpecificOutput:{hookEventName:"PreToolUse",permissionDecision:"ask",permissionDecisionReason:$r}}'
+  exit 0
+}
+
 # deepest_existing_dir <path> — nearest existing ancestor directory of a path
 # (the file itself may not exist yet, e.g. a Write to a new file).
 deepest_existing_dir() {

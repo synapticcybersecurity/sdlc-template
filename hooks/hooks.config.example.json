@@ -19,7 +19,7 @@
   },
 
   "ssh_guard": {
-    "//": "Block raw `ssh` commands (manual remote access). Reach managed hosts through Ansible (the `ap` wrapper) instead. Does not match ssh-keygen/ssh-add/ssh-keyscan or ~/.ssh paths.",
+    "//": "PROMPT (ask, not block) on raw `ssh` commands to prefer Ansible (the `ap` wrapper). Command-position match: fires on ssh at start or after ; & | && || — not on prose/grep/ssh-keygen/~/.ssh paths.",
     "enabled": true,
     "bypass_env": "CLAUDE_ALLOW_SSH"
   },

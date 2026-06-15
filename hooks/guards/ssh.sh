@@ -1,29 +1,31 @@
-# hooks/guards/ssh.sh — block raw `ssh` (manual remote access).
+# hooks/guards/ssh.sh — prompt on raw `ssh` (prefer Ansible).
 #
-# Contract: reach managed hosts through Ansible (the `ap` wrapper), NEVER raw
-# ssh. Raw ssh bypasses the project-local ssh_config + automation identity and
-# trips the Bitwarden SSH agent (e.g. `ssh -i <pubkey> root@host`, which can't
-# work and just spawns auth prompts). Requires lib/common.sh sourced first.
+# Preference: reach managed hosts through Ansible (the `ap` wrapper), not raw
+# ssh — raw ssh bypasses the project-local ssh_config + automation identity and
+# trips the Bitwarden agent (e.g. `ssh -i <pubkey> root@host`). This guard does
+# NOT hard-block; it asks (surfaces a permission prompt) so the user approves
+# genuine ssh and waves off the reflexive case. Requires lib/common.sh first.
 #
-# Matches the `ssh` binary as a command word; does NOT match ssh-keygen /
-# ssh-add / ssh-keyscan (those have no space after `ssh`), nor `~/.ssh/...`
-# paths (no trailing space). `sshpass … ssh host` and `/usr/bin/ssh host` DO
-# match (they are still ssh).
+# Command-position matching: fires only when `ssh` is actually INVOKED — at the
+# start of the command or after a separator (; & | && ||). So `ssh host …`,
+# `foo && ssh host`, `… | ssh host` prompt; but `echo "use ssh"`, `grep ssh f`,
+# `man ssh`, `ssh-keygen`, `~/.ssh/...` do NOT. (Trade-off: `/usr/bin/ssh`,
+# `sudo ssh`, `sshpass … ssh` aren't matched — acceptable for a soft prompt.)
 
 guard_ssh() {
   [ "$(config_get '.ssh_guard.enabled' 'true')" = "true" ] || return 0
 
   local cmd; cmd="$(hook_field '.tool_input.command')"
   [ -z "$cmd" ] && return 0
-  printf '%s' "$cmd" | grep -Eq '(^|[^[:alnum:]_.-])ssh[[:space:]]' || return 0
+  printf '%s' "$cmd" | grep -Eq '(^|[;&|])[[:space:]]*ssh[[:space:]]' || return 0
 
   local bypass; bypass="$(config_get '.ssh_guard.bypass_env' 'CLAUDE_ALLOW_SSH')"
   bypassed "$bypass" && return 0
 
-  deny "Refusing a raw 'ssh' command — manual SSH is disabled. Reach managed hosts through Ansible instead:
+  ask "Raw 'ssh' — this project prefers Ansible. Reach managed hosts via:
 
     ansible/bin/ap <domain> <env> ping.yml --limit <host>
     ansible/bin/ap <domain> <env> <playbook> --limit <host> [--check --diff]
 
-Raw ssh bypasses the project-local ssh_config + automation identity and trips the Bitwarden agent. If you genuinely need a one-off interactive shell, ask the user to run it themselves via '! ssh ...'. Override for this session: ${bypass}=1."
+Raw ssh bypasses the project ssh_config + automation identity and trips the Bitwarden agent. Approve only if Ansible genuinely can't do this. (To skip this prompt for a session: ${bypass}=1.)"
 }
