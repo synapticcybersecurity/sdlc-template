@@ -133,20 +133,31 @@ cmd()  { printf '%s' "$(bash_json "$1" "$2")" | "$HOOKS/pre-bash.sh"; }
 # ssh guard
 # ---------------------------------------------------------------------------
 
-@test "raw ssh to a host is denied" {
+@test "raw ssh to a host prompts (ask, not deny)" {
   run cmd "ssh root@kvm-00 'uptime'" "$WT"
   [[ -n "$output" ]]
-  [[ "$output" == *'"permissionDecision":"deny"'* ]]
+  [[ "$output" == *'"permissionDecision":"ask"'* ]]
 }
 
-@test "ssh with options/flags is denied" {
+@test "ssh with options/flags prompts (ask)" {
   run cmd "ssh -o ConnectTimeout=5 -i ~/.ssh/k.pub root@host 'echo hi'" "$WT"
-  [[ -n "$output" ]]
+  [[ "$output" == *'"permissionDecision":"ask"'* ]]
 }
 
-@test "/usr/bin/ssh (full path) is denied" {
-  run cmd "/usr/bin/ssh host 'whoami'" "$WT"
-  [[ -n "$output" ]]
+@test "ssh after a separator (&&, |) prompts (command position)" {
+  run cmd "cd /tmp && ssh host uptime" "$WT"
+  [[ "$output" == *'"permissionDecision":"ask"'* ]]
+  run cmd "echo hi | ssh host 'cat'" "$WT"
+  [[ "$output" == *'"permissionDecision":"ask"'* ]]
+}
+
+@test "ssh mentioned in prose/args does NOT prompt (no false positive)" {
+  run cmd "echo 'connect via ssh later'" "$WT"
+  [ -z "$output" ]
+  run cmd "grep ssh /etc/services" "$WT"
+  [ -z "$output" ]
+  run cmd "man ssh" "$WT"
+  [ -z "$output" ]
 }
 
 @test "ssh-keygen / ssh-keyscan / ssh-add are allowed" {
@@ -168,7 +179,7 @@ cmd()  { printf '%s' "$(bash_json "$1" "$2")" | "$HOOKS/pre-bash.sh"; }
   [ -z "$output" ]
 }
 
-@test "ssh with bypass env is allowed" {
+@test "ssh with bypass env is allowed (no prompt)" {
   CLAUDE_ALLOW_SSH=1 run cmd "ssh root@host 'uptime'" "$WT"
   [ -z "$output" ]
 }
