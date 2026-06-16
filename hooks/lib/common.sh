@@ -155,6 +155,15 @@ git_effective_dir() {
     | tail -1 \
     | sed -E 's/^[[:space:]]*-C[[:space:]]+//; s/^"//; s/"$//; s/^'\''//; s/'\''$//')"
   if [ -n "$cdir" ]; then
+    # Expand a leading ~ / ~/ to $HOME so a natural `git -C ~/path commit`
+    # resolves to the real (worktree) path instead of being read as a dir
+    # under cwd and false-denied. ~user and $VAR forms stay unresolved by
+    # design — a static parser can't expand them — and fall through to the
+    # conservative cwd-based decision.
+    case "$cdir" in
+      "~")   cdir="$HOME" ;;
+      "~/"*) cdir="$HOME/${cdir#\~/}" ;;
+    esac
     case "$cdir" in /*) printf '%s' "$cdir" ;; *) printf '%s/%s' "$cwd" "$cdir" ;; esac
   else
     printf '%s' "$cwd"
