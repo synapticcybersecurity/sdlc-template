@@ -124,6 +124,27 @@ cmd()  { printf '%s' "$(bash_json "$1" "$2")" | "$HOOKS/pre-bash.sh"; }
   [ -z "$output" ]
 }
 
+# git_effective_dir — `-C` argument resolution (unit). A leading ~ must
+# expand to $HOME so `git -C ~/worktree commit` isn't read as a relative
+# dir under cwd and false-denied; $VAR stays unresolved (conservative).
+@test "git_effective_dir expands a leading ~/ to \$HOME" {
+  source "$HOOKS/lib/common.sh"
+  run git_effective_dir "git -C ~/proj/repo-wt commit -m x" "/cwd"
+  [ "$output" = "$HOME/proj/repo-wt" ]
+}
+
+@test "git_effective_dir expands a bare ~ to \$HOME" {
+  source "$HOOKS/lib/common.sh"
+  run git_effective_dir "git -C ~ commit -m x" "/cwd"
+  [ "$output" = "$HOME" ]
+}
+
+@test "git_effective_dir leaves an unexpandable \$VAR conservative" {
+  source "$HOOKS/lib/common.sh"
+  run git_effective_dir 'git -C "$WT" commit' "/cwd"
+  [ "$output" = '/cwd/$WT' ]
+}
+
 @test "git log from a main checkout is allowed (not a commit)" {
   run cmd "git log --oneline" "$REPO"
   [ -z "$output" ]
