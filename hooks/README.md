@@ -29,6 +29,15 @@ absolute git dir equals the common git dir; in a **linked** worktree they
 differ. So any `git worktree add` sibling is allowed and the primary checkout
 is blocked — no dependence on a `<repo>-<task>` naming convention.
 
+For the **commit-in-main** guard the target directory is read from the command
+before it runs: a leading `cd <dir> &&|;` and the last `git -C <dir>` are both
+honored (so `cd ~/repo-wt && git commit` and `git -C ~/repo-wt commit` resolve
+to the worktree). A `$VAR` or `~user` path can't be expanded by a static
+pre-exec parser, so it falls back to the cwd-based decision (conservative — may
+deny); the deny message says to re-run with a **literal** path in that case.
+Prefer a literal absolute path (or `~/…`) over a shell variable when committing
+from a worktree.
+
 ## Design guarantees
 
 - **Fail-open.** Missing `jq`, unreadable config, or any git error → the tool

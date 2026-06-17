@@ -75,11 +75,17 @@ guard_commit_in_main() {
   repo_in_scope "$repo" || return 0
 
   if git_main_worktree "$gdir"; then
+    local hint=""
+    if git_dir_arg_unexpandable "$cmd"; then
+      hint="
+
+Note: the commit's directory argument used a shell variable or ~user (e.g. \`git -C \"\$WT\"\` or \`cd \"\$WT\" &&\`), which this guard cannot expand before the command runs — so it fell back to THIS checkout. If you are in fact committing in a worktree, re-run with a literal absolute path (or ~/path), e.g. \`git -C ${repo}-<task> commit ...\`."
+    fi
     deny "Refusing to 'git commit' into the MAIN checkout of $repo. Commit from a dedicated worktree so work can't land on the shared tree's branch:
 
-    $(_wt_recipe "$repo")
+    $(_wt_recipe "$repo")${hint}
 
-To override for this session, set ${bypass}=1 (or disable .worktree_guard.block_commits_in_main in the hooks config)."
+To override, set ${bypass}=1 before launching Claude (or in settings.json env), or disable .worktree_guard.block_commits_in_main in the hooks config."
   fi
   return 0
 }
