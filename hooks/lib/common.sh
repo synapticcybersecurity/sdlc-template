@@ -145,27 +145,61 @@ has_commit_all_flag() {
   printf '%s' "$1" | grep -Eq '[[:space:]](-[a-zA-Z]*a[a-zA-Z]*|--all)([[:space:]]|$)'
 }
 
+# expand_tilde <path> — echo <path> with a leading `~` / `~/` expanded to
+# $HOME. `~user` and `$VAR` forms are left untouched by design — a static
+# parser can't expand them — so callers fall through to the conservative
+# cwd-based decision.
+expand_tilde() {
+  case "$1" in
+    "~")   printf '%s' "$HOME" ;;
+    "~/"*) printf '%s/%s' "$HOME" "${1#\~/}" ;;
+    *)     printf '%s' "$1" ;;
+  esac
+}
+
 # git_effective_dir <command> <cwd> — the directory git would operate in:
-# the last `-C <dir>` argument if present (resolved against cwd if relative),
-# otherwise cwd. Handles unquoted, "double"-, and 'single'-quoted paths.
+# a leading `cd <dir> &&|;` shifts the working directory before git runs, and
+# the last `-C <dir>` argument (resolved against that cwd if relative) wins on
+# top. Falls back to cwd otherwise. Handles unquoted, "double"-, and
+# 'single'-quoted paths; ~ expands, $VAR / ~user stay conservative.
 git_effective_dir() {
-  local cmd="$1" cwd="$2" cdir
+  local cmd="$1" cwd="$2" cddir cdir
+
+  # A *leading* `cd <dir> &&|;` becomes git's working directory (so a natural
+  # `cd ~/repo-wt && git commit`, with no -C, isn't read against the original
+  # cwd and false-denied). Only the leading position matters — a cd after the
+  # git command can't affect it. An absolute / ~-expanded target replaces cwd;
+  # a relative one resolves under cwd; $VAR / ~user stay conservative.
+  cddir="$(printf '%s' "$cmd" \
+    | grep -oE '^[[:space:]]*cd[[:space:]]+("[^"]+"|'\''[^'\'']+'\''|[^[:space:]]+)[[:space:]]*(&&|;)' \
+    | head -1 \
+    | sed -E 's/^[[:space:]]*cd[[:space:]]+//; s/[[:space:]]*(&&|;)[[:space:]]*$//; s/^"//; s/"$//; s/^'\''//; s/'\''$//')"
+  if [ -n "$cddir" ]; then
+    cddir="$(expand_tilde "$cddir")"
+    case "$cddir" in /*) cwd="$cddir" ;; *) cwd="$cwd/$cddir" ;; esac
+  fi
+
   cdir="$(printf '%s' "$cmd" \
     | grep -oE '(^|[[:space:]])-C[[:space:]]+("[^"]+"|'\''[^'\'']+'\''|[^[:space:]]+)' \
     | tail -1 \
     | sed -E 's/^[[:space:]]*-C[[:space:]]+//; s/^"//; s/"$//; s/^'\''//; s/'\''$//')"
   if [ -n "$cdir" ]; then
-    # Expand a leading ~ / ~/ to $HOME so a natural `git -C ~/path commit`
-    # resolves to the real (worktree) path instead of being read as a dir
-    # under cwd and false-denied. ~user and $VAR forms stay unresolved by
-    # design — a static parser can't expand them — and fall through to the
-    # conservative cwd-based decision.
-    case "$cdir" in
-      "~")   cdir="$HOME" ;;
-      "~/"*) cdir="$HOME/${cdir#\~/}" ;;
-    esac
+    # Expand a leading ~ / ~/ so a natural `git -C ~/path commit` resolves to
+    # the real (worktree) path instead of being read as a dir under cwd and
+    # false-denied. ~user / $VAR stay conservative (see expand_tilde).
+    cdir="$(expand_tilde "$cdir")"
     case "$cdir" in /*) printf '%s' "$cdir" ;; *) printf '%s/%s' "$cwd" "$cdir" ;; esac
   else
     printf '%s' "$cwd"
   fi
+}
+
+# git_dir_arg_unexpandable <command> — true if a `-C` or leading `cd`
+# directory argument contains a shell variable ($VAR) or a ~user form that a
+# static parser can't expand. In that case git_effective_dir falls back to the
+# cwd-based decision, so a worktree-targeted commit may be denied; the deny
+# message uses this to tell the operator to re-run with a literal path.
+git_dir_arg_unexpandable() {
+  printf '%s' "$1" \
+    | grep -Eq "(^|[[:space:]])(-C|cd)[[:space:]]+[\"']?(\\\$|~[^/[:space:]\"'])"
 }

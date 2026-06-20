@@ -145,6 +145,79 @@ cmd()  { printf '%s' "$(bash_json "$1" "$2")" | "$HOOKS/pre-bash.sh"; }
   [ "$output" = '/cwd/$WT' ]
 }
 
+# A leading `cd <dir> &&` shifts the working directory before git runs.
+@test "cd <worktree> && git commit is allowed" {
+  run cmd "cd $WT && git commit -m x" "$REPO"
+  [ -z "$output" ]
+}
+
+@test "cd <main> && git commit is still denied" {
+  run cmd "cd $REPO && git commit -m x" "$BATS_TEST_TMPDIR/elsewhere"
+  [[ -n "$output" ]]
+  [[ "$output" == *"MAIN checkout"* ]]
+}
+
+@test "git_effective_dir honors a leading absolute cd as the base dir" {
+  source "$HOOKS/lib/common.sh"
+  run git_effective_dir "cd /abs/repo-wt && git commit -m x" "/cwd"
+  [ "$output" = "/abs/repo-wt" ]
+}
+
+@test "git_effective_dir resolves -C relative to a leading cd" {
+  source "$HOOKS/lib/common.sh"
+  run git_effective_dir "cd /abs/base && git -C sub commit -m x" "/cwd"
+  [ "$output" = "/abs/base/sub" ]
+}
+
+@test "git_effective_dir expands a leading-cd ~/ to \$HOME" {
+  source "$HOOKS/lib/common.sh"
+  run git_effective_dir "cd ~/proj/repo-wt && git commit -m x" "/cwd"
+  [ "$output" = "$HOME/proj/repo-wt" ]
+}
+
+@test "git_effective_dir leaves a leading-cd \$VAR conservative" {
+  source "$HOOKS/lib/common.sh"
+  run git_effective_dir 'cd "$WT" && git commit' "/cwd"
+  [ "$output" = '/cwd/$WT' ]
+}
+
+@test "git_effective_dir ignores a non-leading cd (after the git command)" {
+  source "$HOOKS/lib/common.sh"
+  run git_effective_dir "git commit -m x; cd /elsewhere" "/cwd"
+  [ "$output" = "/cwd" ]
+}
+
+# git_dir_arg_unexpandable — drives the extra deny-message hint.
+@test "git_dir_arg_unexpandable flags a -C \$VAR" {
+  source "$HOOKS/lib/common.sh"
+  run git_dir_arg_unexpandable 'git -C "$WT" commit'
+  [ "$status" -eq 0 ]
+}
+
+@test "git_dir_arg_unexpandable flags a cd \$VAR" {
+  source "$HOOKS/lib/common.sh"
+  run git_dir_arg_unexpandable 'cd "$WT" && git commit'
+  [ "$status" -eq 0 ]
+}
+
+@test "git_dir_arg_unexpandable does not flag a literal -C path" {
+  source "$HOOKS/lib/common.sh"
+  run git_dir_arg_unexpandable "git -C /abs/repo-wt commit"
+  [ "$status" -ne 0 ]
+}
+
+@test "git_dir_arg_unexpandable does not flag a -C ~/ path" {
+  source "$HOOKS/lib/common.sh"
+  run git_dir_arg_unexpandable "git -C ~/proj/repo-wt commit"
+  [ "$status" -ne 0 ]
+}
+
+@test "the \$VAR-path deny message includes the literal-path hint" {
+  run cmd 'git -C "$WT" commit -m x' "$REPO"
+  [[ -n "$output" ]]
+  [[ "$output" == *"literal absolute path"* ]]
+}
+
 @test "git log from a main checkout is allowed (not a commit)" {
   run cmd "git log --oneline" "$REPO"
   [ -z "$output" ]
