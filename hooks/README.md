@@ -94,6 +94,14 @@ sessions. It makes the compliant path the easy path:
 
     cw feature/42-thing          # from inside the repo; opens Claude in <repo>-thing
 
+Worktrees aren't auto-removed — a finished task's sibling dir lingers and
+clutters `projects_root` until you clean it up. When a branch is merged:
+
+    git -C <repo> worktree remove <repo>-<task>   # drop the dir
+    git -C <repo> worktree prune                  # clear stale admin entries
+
+`worktree remove` refuses if the tree is dirty; commit/stash or `--force` first.
+
 ## Config reference
 
 See `hooks.config.example.json`. Keys: `worktree_guard.{enabled,projects_root,

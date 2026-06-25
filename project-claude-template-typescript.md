@@ -52,6 +52,7 @@ If the scope is unclear, ask the user once: *"Is this a focused fix/feature or a
 - Avoid `any` — use `unknown` and narrow, or define proper types
 - Underscore prefix (`_var`) for intentionally unused parameters only
 - **Pre-commit:** if the project uses Husky + lint-staged, it runs Prettier (and lint) on staged files automatically — let it run; don't bypass with `git commit --no-verify`
+  - A fresh `git worktree` has no `node_modules`, so Husky isn't wired up and the hook errors (`.husky/_/husky.sh: No such file or directory`). Run `npm install` in the new worktree to restore it — don't reach for `--no-verify`. The tree isn't broken; it just hasn't been installed.
 
 ---
 
