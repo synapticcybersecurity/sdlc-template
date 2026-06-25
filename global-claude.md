@@ -61,6 +61,8 @@ Types: feat, fix, refactor, docs, test, chore, build, ci, security, perf
 - `gh auth switch` is blocked (it flips the global, session-shared account) — use a scoped token instead.
 - No-AI-attribution is enforced natively by the `attribution` setting in `settings.json`.
 
+**Working in a worktree:** a freshly-added `git worktree` is uninitialized — its dependencies, build/image, and any host Git hooks aren't set up until you install/build in it. A hook or command failing there (e.g. a pre-commit hook erroring on a missing helper) means *uninstalled*, not broken — set the worktree up rather than bypassing the hook with `--no-verify`. Remove the worktree when its branch merges (`git worktree remove`) so finished-task dirs don't pile up.
+
 **Pull Requests must include:**
 - What changed and why
 - Linked issue or task
