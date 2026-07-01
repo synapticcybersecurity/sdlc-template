@@ -45,6 +45,11 @@ All substantial changes should map to a tracked work item (GitHub Issue, Jira, L
 - Use feature branches + PRs for non-trivial changes
 - Branch naming: `feature/<issue-id>-<short-name>`, `fix/...`, `refactor/...`, `chore/...`, `docs/...`
 
+**Worktrees for shared or concurrently-accessed checkouts:**
+- When a working copy may be used by more than one agent/session at once, the checkout shares a single git HEAD and index. Branch operations interleave: a `git checkout` (or `checkout -b`) in one session moves HEAD for **both**, so commits can silently land on the wrong branch. `git checkout -b` is **not** isolation under concurrency.
+- Isolate branch work in a dedicated `git worktree` (its own HEAD/index) instead: `git -C <repo> worktree add <repo>-<task> -b <branch> origin/main` — or use the harness's worktree isolation (the Agent tool's `isolation: "worktree"`, or `EnterWorktree`), which also auto-cleans.
+- If you must work in the shared checkout, verify `git branch --show-current` immediately before **every** commit and push, and stop (surface to the user) if it isn't the branch you created. Treat HEAD as shared mutable state.
+
 **Commits:**
 ```
 <type>: <short summary>
