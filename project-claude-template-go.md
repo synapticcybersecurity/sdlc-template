@@ -96,6 +96,22 @@ Go has explicit error handling. These rules prevent common mistakes:
 
 ---
 
+## Security
+
+For code handling auth, crypto, secrets, or untrusted input:
+
+- **Parameterize every query.** Pass arguments as placeholders (`db.QueryContext(ctx, "SELECT … WHERE id = $1", id)`) — never build SQL with `fmt.Sprintf` or string concatenation from input.
+- **Randomness from `crypto/rand`, never `math/rand`.** `math/rand` is predictable; tokens, keys, salts, and IDs that must be unguessable come from `crypto/rand`.
+- **Compare secrets in constant time.** Tokens, MACs, and auth tags go through `crypto/subtle.ConstantTimeCompare` — never `==` or `bytes.Equal`.
+- **Render web output with `html/template`, not `text/template`.** `html/template` escapes contextually (HTML/JS/URL); `text/template` does not and invites XSS.
+- **Validate and bound untrusted input at the boundary** — sizes, counts, lengths. Set `http.Server` timeouts and wrap request bodies in `http.MaxBytesReader` to resist resource exhaustion.
+- **Never hand-roll crypto.** Use `crypto/*` and `golang.org/x/crypto` primitives; never reuse a nonce; hash passwords with `bcrypt`/`argon2`, not a bare SHA.
+- **Never log secrets** and keep them out of wrapped error messages.
+
+> Related rules elsewhere in this file: **Error Handling** (check every error; don't discard with `_`), **HTTP / API** (thin handlers, stdlib `net/http`), and **Go-Specific Rules** (propagate `context.Context`, no global mutable state).
+
+---
+
 ## Testing
 
 - **Framework:** `go test` (standard library). Do not add testify unless the project already uses it.

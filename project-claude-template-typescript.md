@@ -83,6 +83,22 @@ Both must exit 0. If there are pre-existing errors in files you did not touch, f
 
 ---
 
+## Security
+
+For code handling auth, crypto, secrets, or untrusted input:
+
+- **Validate untrusted input at the boundary** with a schema (zod) — parse `req.body`, query params, and webhook payloads into typed data at the edge. A TypeScript type is a compile-time assertion, not a runtime guarantee; don't trust unparsed input as typed.
+- **Prisma parameterizes for you** — the Database rule against raw SQL is a security rule, not just a type-safety one. If raw SQL is ever unavoidable, use parameterized `Prisma.sql` tagged templates, never string interpolation.
+- **Compare secrets in constant time.** Use `crypto.timingSafeEqual` for tokens and signatures — never `===`.
+- **No dynamic code execution** — never `eval`, `new Function`, or `child_process` with interpolated input.
+- **Avoid `dangerouslySetInnerHTML`** (and `v-html`). React escapes by default — don't defeat it. If you must inject HTML, sanitize with a vetted library first.
+- **Randomness from `crypto`, never `Math.random`.** Use `crypto.randomUUID()` / `crypto.randomBytes()` for tokens and IDs. Let Better Auth manage sessions and CSRF; don't hand-roll them.
+- **Never log secrets** and keep tokens out of error responses.
+
+> Related rules elsewhere in this file: **Database and Prisma** (query builder only, never `$queryRaw`), **Better Auth** (middleware ordering; webhook/CSRF exceptions), and **Code Style** (no `any` — narrow `unknown` at boundaries).
+
+---
+
 ## Database and Prisma
 
 - **Always read `prisma/schema.prisma` before any database work** — it is the source of truth
