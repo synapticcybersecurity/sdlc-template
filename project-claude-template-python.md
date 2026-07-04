@@ -70,6 +70,22 @@ Must exit 0. If there are pre-existing errors in files you did not touch, flag t
 
 ---
 
+## Security
+
+For code handling auth, crypto, secrets, or untrusted input:
+
+- **Parameterize every query.** Pass values as driver parameters (`cur.execute("SELECT … WHERE id = %s", (id,))`) or via the ORM — never build SQL with f-strings, `%`, `.format()`, or concatenation from input.
+- **Tokens from `secrets`, never `random`.** `random` is a PRNG, not cryptographically secure; use `secrets.token_urlsafe()` / `secrets.token_bytes()` for tokens, keys, and one-time codes.
+- **Compare secrets in constant time.** Use `hmac.compare_digest` for tokens and signatures — never `==`.
+- **Never deserialize untrusted input unsafely.** No `pickle.loads`, no `yaml.load` (use `yaml.safe_load`), no `eval`/`exec` on anything input-derived — this extends the Python-Specific ban on `shell=True`.
+- **Hash passwords with a vetted KDF** (`argon2-cffi` or `bcrypt`) — never a bare `hashlib` digest.
+- **Validate untrusted input at the boundary** with Pydantic, and bound sizes/counts to resist resource exhaustion.
+- **Never log secrets** and keep them out of exception messages.
+
+> Related rules elsewhere in this file: **Python-Specific Rules** (no bare `except:`, no `subprocess(shell=True)` on untrusted input) and **Project Configuration** (read secrets from env once in a centralized, validated settings module).
+
+---
+
 ## Testing
 
 - **Framework:** pytest (with `uv run pytest`)
