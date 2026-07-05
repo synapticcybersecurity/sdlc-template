@@ -83,6 +83,16 @@ Both must exit 0. If there are pre-existing errors in files you did not touch, f
 
 ---
 
+## Error Handling
+
+- **Throw `Error` (or a subclass), never strings or plain objects** — only `Error` carries a stack trace. Define domain error classes (`class NotFoundError extends Error`) for failures callers must distinguish.
+- **Catch clauses are `unknown`** (strict / `useUnknownInCatchVariables`) — narrow with `instanceof` before touching `.message`; don't assume the shape.
+- **Never swallow** — no empty `catch {}`. Handle it, re-throw it, or don't catch it.
+- **No floating promises** — always `await` or `.catch()`; an unhandled rejection can crash the Node process. Enable `@typescript-eslint/no-floating-promises`.
+- **Expected vs exceptional** — return a typed result (discriminated union / `Result`) for expected failures at a boundary; reserve `throw` for the genuinely exceptional. Map errors to HTTP status in one error-handling middleware, not per-route.
+
+---
+
 ## Security
 
 For code handling auth, crypto, secrets, or untrusted input:
@@ -128,6 +138,16 @@ For code handling auth, crypto, secrets, or untrusted input:
 **If the project uses Stripe webhooks or CSRF protection:**
 - `express.json()` must **skip the Stripe webhook route** — webhook signature verification needs the raw request body.
 - CSRF middleware must **skip webhook and auth routes** (they authenticate by signature/token, not session cookie).
+
+---
+
+## Dependency Management
+
+- **`package.json` + `package-lock.json`** — both committed; the lockfile pins the resolved tree for reproducible installs.
+- **`npm ci` in Docker/CI**, not `npm install` — it installs exactly the lockfile and fails on drift instead of silently resolving new versions.
+- **Minimal dependencies** — every dep and its transitive tree is supply-chain surface. Prefer `node:` builtins and small, well-scoped packages; don't pull a library for a few lines you can own.
+- **`npm audit`** gates known advisories; update deliberately as its own change and review the lockfile diff — don't let bumps ride along in an unrelated PR.
+- **Workspaces** — in an npm-workspaces monorepo keep one lockfile at the root, and add deps to the specific workspace (`npm i -w apps/backend <pkg>`) rather than the root unless they're genuinely shared.
 
 ---
 
