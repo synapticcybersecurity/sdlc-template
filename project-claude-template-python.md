@@ -70,6 +70,16 @@ Must exit 0. If there are pre-existing errors in files you did not touch, flag t
 
 ---
 
+## Error Handling
+
+- **Catch specific exceptions** — never a bare `except:` (it swallows `KeyboardInterrupt`/`SystemExit`) and avoid a blanket `except Exception` unless you re-raise. Catch the narrowest type that you can actually handle.
+- **Never swallow** — `except ...: pass` (or logging and continuing) hides failures. If you can't handle it, don't catch it; let it propagate.
+- **Preserve the chain** — when re-raising as a different type, use `raise DomainError(...) from err` so the original traceback survives. Bare `raise` inside an `except` re-raises the current exception unchanged.
+- **Define domain exception types** for errors callers need to distinguish; a shared base class per package lets a boundary handler catch the family.
+- **Handle at the boundary** — let exceptions propagate to one place (request handler, task runner, `main`) that logs and maps them to a response/exit code, rather than catching everywhere.
+
+---
+
 ## Security
 
 For code handling auth, crypto, secrets, or untrusted input:
@@ -82,7 +92,7 @@ For code handling auth, crypto, secrets, or untrusted input:
 - **Validate untrusted input at the boundary** with Pydantic, and bound sizes/counts to resist resource exhaustion.
 - **Never log secrets** and keep them out of exception messages.
 
-> Related rules elsewhere in this file: **Python-Specific Rules** (no bare `except:`, no `subprocess(shell=True)` on untrusted input) and **Project Configuration** (read secrets from env once in a centralized, validated settings module).
+> Related rules elsewhere in this file: **Error Handling** (catch specific exceptions; don't swallow), **Python-Specific Rules** (no `subprocess(shell=True)` on untrusted input), and **Project Configuration** (read secrets from env once in a centralized, validated settings module).
 
 ---
 
@@ -100,6 +110,16 @@ For code handling auth, crypto, secrets, or untrusted input:
 
 ---
 
+## Dependency Management
+
+- **`pyproject.toml` + `uv.lock`** — both committed; the lockfile pins the resolved graph for reproducible installs.
+- **Use `uv add` / `uv remove`** — they update `pyproject.toml` and `uv.lock` together. Don't hand-edit dependency pins.
+- **Minimal dependencies** — Python's standard library is broad; don't add a package for something `pathlib`, `datetime`, `json`, `itertools`, or `secrets` already handles well. Every dep is supply-chain surface.
+- **Update deliberately** — `uv lock --upgrade` (or a single package) as its own change, and review the `uv.lock` diff; don't let dependency bumps ride along inside an unrelated change.
+- **`uv sync --frozen`** in Docker/CI so a build fails on lockfile drift instead of silently resolving new versions.
+
+---
+
 ## Validation Commands
 
 ```bash
@@ -113,10 +133,8 @@ docker compose exec app uv run pytest
 
 ## Python-Specific Rules
 
-- **No bare `except:`** — always catch specific exceptions
 - **No `os.system()` or `subprocess` with `shell=True`** for untrusted input
-- **Prefer standard library** where it's clear and sufficient — do not add dependencies for things Python handles well
-- **Use `uv add`** to add dependencies (updates `pyproject.toml` and lockfile together)
+- **Prefer explicit over implicit** — no `import *`; return early over deep nesting; name what a value is, not its type
 
 ---
 
