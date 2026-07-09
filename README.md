@@ -1,5 +1,7 @@
 # SDLC Template
 
+[![CI](https://github.com/synapticcybersecurity/sdlc-template/actions/workflows/hooks-tests.yml/badge.svg)](https://github.com/synapticcybersecurity/sdlc-template/actions/workflows/hooks-tests.yml)
+
 Reusable standards and templates for Claude Code projects. Contains the shared global Claude instructions, per-project templates for multiple stacks, and GitHub workflow templates.
 
 ## Quickstart

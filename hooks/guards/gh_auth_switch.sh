@@ -1,4 +1,5 @@
 # hooks/guards/gh_auth_switch.sh — block `gh auth switch`.
+# shellcheck shell=bash
 #
 # `gh`'s active account is global, shared state across all concurrent sessions.
 # Switching it to fix a push breaks whichever other session needed the previous

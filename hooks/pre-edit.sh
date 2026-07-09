@@ -4,6 +4,7 @@
 # the configured projects_root. See hooks/README.md.
 #
 # Fail-open: never block on an internal error.
+# shellcheck source-path=SCRIPTDIR
 set -uo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

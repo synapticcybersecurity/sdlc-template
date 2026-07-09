@@ -1,4 +1,5 @@
 # hooks/lib/common.sh — shared helpers for the sdlc PreToolUse hooks.
+# shellcheck shell=bash
 #
 # Sourced by hooks/pre-edit.sh and hooks/pre-bash.sh. Provides stdin/JSON
 # parsing, machine-config lookup, and the allow()/deny() verdict helpers.
@@ -104,6 +105,7 @@ under_root() {
 # glob_match <basename> <pattern> — true if basename matches the (unquoted) glob.
 glob_match() {
   local base="$1" pat="$2"
+  # shellcheck disable=SC2053  # the unquoted RHS glob is the point — this IS the glob match
   [[ "$base" == $pat ]]
 }
 
@@ -150,6 +152,7 @@ has_commit_all_flag() {
 # parser can't expand them — so callers fall through to the conservative
 # cwd-based decision.
 expand_tilde() {
+  # shellcheck disable=SC2088  # the "~/" case pattern is a literal match, not a tilde expansion
   case "$1" in
     "~")   printf '%s' "$HOME" ;;
     "~/"*) printf '%s/%s' "$HOME" "${1#\~/}" ;;

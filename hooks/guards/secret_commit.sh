@@ -1,4 +1,5 @@
 # hooks/guards/secret_commit.sh — block committing secret files.
+# shellcheck shell=bash
 #
 # When the Bash command is a `git commit`, scan the files it would record and
 # refuse if any matches a secret glob (and isn't an allow-listed example file).
