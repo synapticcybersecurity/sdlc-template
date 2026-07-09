@@ -1,4 +1,5 @@
 # hooks/guards/ssh.sh — prompt on raw `ssh` (prefer Ansible).
+# shellcheck shell=bash
 #
 # Preference: reach managed hosts through Ansible (the `ap` wrapper), not raw
 # ssh — raw ssh bypasses the project-local ssh_config + automation identity and

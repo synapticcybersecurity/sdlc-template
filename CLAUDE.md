@@ -12,7 +12,7 @@ This repo is bash + markdown. Its outputs are *other repos'* instructions: the s
 
 **Consequence:** anything you add under `.github/` or `docs/` lands in every downstream project.
 
-- **Repo-only tooling must NOT live under `.github/` or `docs/`.** The obvious trap is CI: a workflow under `.github/workflows/` would propagate to every consumer. Keep repo-internal tooling at the root, in `bin/`, or in `test/`.
+- **Repo-only tooling must NOT live under `.github/` or `docs/`** — with one deliberate exception: `.github/workflows/` is explicitly excluded from the templated set by `sync.sh` (and asserted by a bats test), so CI workflows there do **not** propagate. Everything else under `.github/`/`docs/` does. Keep other repo-internal tooling at the root, in `bin/`, or in `test/`.
 - `examples/` is reference material and is deliberately **not** propagated — don't move its contents under `docs/`.
 - Consumer-owned paths `docs/prds/` and `docs/adrs/` are never touched by `sync.sh` (even with `--force`); don't add template content there.
 
@@ -65,4 +65,4 @@ When modifying `bin/sync.sh`, preserve these:
 **Key decisions:**
 - Loading is `@import`-based: consumers' `~/.claude/CLAUDE.md` imports `global-claude.md` by path, so updates flow via `git pull` with no copying.
 - `sync.sh` is git-ref-driven and data-driven over the `.github/`+`docs/` trees rather than a hardcoded file list.
-- No CI in-repo yet (would need to live outside `.github/` to avoid propagation) — tracked as follow-up.
+- CI lives in `.github/workflows/hooks-tests.yml` (shellcheck + the bats suites, with a macOS bash 3.2 leg for the portability invariant). It runs at the normal workflow path — not outside `.github/` — because `sync.sh` excludes `.github/workflows/` from propagation, so it never reaches consumers.

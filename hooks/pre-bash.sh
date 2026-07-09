@@ -3,6 +3,7 @@
 # Runs the Bash-facing guards in order; the first to deny wins. See README.
 #
 # Fail-open: never block on an internal error.
+# shellcheck source-path=SCRIPTDIR
 set -uo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

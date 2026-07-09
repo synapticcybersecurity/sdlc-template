@@ -1,4 +1,5 @@
 # hooks/guards/worktree.sh — enforce worktree-per-task on shared checkouts.
+# shellcheck shell=bash
 #
 # guard_worktree:        blocks Edit/Write/NotebookEdit to a guarded repo's
 #                        MAIN checkout (use a linked worktree).
