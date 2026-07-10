@@ -71,6 +71,38 @@ from a worktree.
    block is the macOS Ansible/Pulumi fork-safety fix — drop it on Linux, and
    note `no_proxy=*` only matters behind a proxy.
 
+## Git-native pre-commit (human commits)
+
+The PreToolUse hooks above only see **Claude's** tool calls — a human's manual
+`git commit` in a terminal bypasses them. `hooks/git/pre-commit` is a git-native
+guard that closes the secret-commit gap for *any* committer. Wire it via
+`core.hooksPath`:
+
+```bash
+make install-git-hooks                     # this repo (dogfood it here)
+git -C <repo> config core.hooksPath /ABS/PATH/sdlc_template/hooks/git   # one repo
+git config --global core.hooksPath /ABS/PATH/sdlc_template/hooks/git    # every repo
+```
+
+It reuses the same `secret_commit.*` globs and defaults as the Bash guard and
+returns nonzero to abort the commit when a staged file looks like a secret.
+
+**Only the secret guard is git-native, by design.** The worktree, commit-in-main,
+gh-auth-switch, and ssh guards all target *Claude's* session/concurrency hazards
+(work landing on a shared tree's branch, flipping the global `gh` account) — a
+human committing to their own checkout is legitimate, so those stay Claude-only.
+
+**Caveats:**
+- `core.hooksPath` is single-valued, and a repo-local setting overrides
+  `--global`. A **Husky/lint-staged** repo points `core.hooksPath` at `.husky/`,
+  which shadows this hook — chain the sdlc guard into that repo's own hooks if
+  you need both.
+- Linked **worktrees inherit** the setting (they share the main checkout's
+  config), so the guard fires in worktrees with no per-worktree install — unlike
+  Husky, which needs `node_modules` first.
+- `git commit --no-verify` bypasses *all* git hooks including this one, as does
+  `CLAUDE_ALLOW_SECRET_COMMIT=1`.
+
 ## Scoping the worktree guard
 
 Most people run concurrent sessions in only a few checkouts, so the guard
@@ -113,8 +145,10 @@ shared_repos[],exempt_repos[],block_commits_in_main,bypass_env}`,
 
 - Edit guard covers Edit/Write/NotebookEdit, not arbitrary Bash file writes
   (`sed -i`, `>`). Defense-in-depth, not airtight.
-- Secret guard catches Claude's commits, not a human's manual `git commit`
-  (a git-native `core.hooksPath` pre-commit would; future hardening).
+- The Edit/Bash guards see only Claude's tool calls, never a human's manual
+  `git commit`. The git-native pre-commit above closes this for the **secret**
+  guard once wired via `core.hooksPath` — it's opt-in per machine, and
+  `--no-verify` still bypasses it. The other guards stay Claude-only by design.
 
 ## Tests
 
