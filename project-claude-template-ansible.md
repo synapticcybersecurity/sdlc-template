@@ -41,6 +41,7 @@ If the scope is unclear, ask the user once: *"Is this a focused fix/feature or a
   ansible-playbook -i inventories/<env> site.yml          # apply once the diff looks right
   ```
 - **Use `--limit`** to constrain blast radius to specific hosts when iterating.
+- **Ad-hoc `ssh` uses the project's SSH config, not yours.** If the repo ships an `ssh_config` that Ansible loads via `ansible_ssh_common_args -F`, pass the same `-F <that file>` on manual `ssh`/`scp` to a fleet host. Otherwise you connect with the operator's `~/.ssh/config` — a different identity and a different control socket than the automation uses. See **SSH and Remote Execution** in the global standards.
 
 ---
 
@@ -108,6 +109,7 @@ These defaults are deliberate — don't weaken them to work around a failure; fi
 - **`become = False` by default** — escalate privilege explicitly per-task/play with `become: true`, rather than running everything as root.
 - **`gathering = smart`** with a fact cache (e.g. ~1h) to speed reruns.
 - **`pipelining = True`** (requires `requiretty` disabled in sudoers) for faster execution.
+- **`ControlMaster = auto` with a `ControlPersist` matched to how the keys are held.** On-disk keys: seconds are fine. Keys held by an agent that prompts per signature (Bitwarden, hardware token) — the tell is a `.pub` as `IdentityFile`, private half never on disk — need **minutes**, or the master drops during a reboot or long task and the operator re-authorizes for every reconnect. `ControlMaster` alone does not prevent this. See **SSH and Remote Execution** in the global standards.
 
 ---
 
