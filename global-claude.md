@@ -155,6 +155,17 @@ When code calls an external API or service:
 
 ---
 
+## SSH and Remote Execution
+
+Applies to any repo that drives remote hosts over SSH — Ansible, deploy scripts, ad-hoc administration.
+
+- **Where the fleet's keys are agent-held, connection reuse is a correctness concern, not a performance tweak.** If private keys live in an agent that prompts for authorization on every signature (Bitwarden, a hardware token, a smartcard), the operator approves once per SSH **connection**, not per command. `ControlPersist` must therefore be measured in **minutes**, not seconds: a short idle timeout drops the master connection during any reboot, pause, or long-running task, and the next task opens a fresh one and prompts again — turning a single approval into dozens over one run. `ControlMaster=auto` alone does **not** prevent this, which is why the misconfiguration reads as correct. The tell for agent-held keys is an `IdentityFile` pointing at a `.pub` file, with the private half never on disk.
+- **With ordinary on-disk keys, this does not apply.** There is no prompt, so a short `ControlPersist` costs nothing. Don't raise it in projects whose keys are on disk — the rationale doesn't hold there, and the change would be unexplained.
+- **Ad-hoc `ssh` must use the project's SSH config, not the operator's.** Where a repo ships a project-local `ssh_config` (e.g. `inventory/<domain>/<env>/ssh_config`, loaded by Ansible via `ansible_ssh_common_args -F`), manual and ad-hoc `ssh` commands must pass the same `-F <that file>`. `~/.ssh/config` belongs to the operator and carries whatever interactive identity they prefer; automation must neither depend on it nor require changes to it.
+- **A project config used with `-F` must declare its own multiplexing.** `-F` makes ssh ignore `~/.ssh/config` entirely, so a project config lacking `ControlMaster`/`ControlPath`/`ControlPersist` silently *removes* connection reuse for every ad-hoc command. Set all three, and use `ControlPath ~/.ssh/cm/%C` — `%C` is a hash, and `ControlPath` has a hard ~104-byte limit that expanded paths under long working directories exceed.
+
+---
+
 ## Code Deletion Safety
 
 - Verify usage before deleting any code (grep for function names, check imports)
