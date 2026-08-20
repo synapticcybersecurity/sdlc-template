@@ -55,6 +55,22 @@ bootstrap() {
   [[ "$output" == *"requires --stack"* ]]
 }
 
+@test "every stack template in the real repo is listed in the usage text" {
+  # Guards the drift where a new project-claude-template-<stack>.md is added but
+  # never wired into sync.sh's --stack list, leaving it undiscoverable.
+  local repo_root usage
+  repo_root="$BATS_TEST_DIRNAME/.."
+  usage="$("$REAL_SYNC" 2>&1 || true)"
+  for template in "$repo_root"/project-claude-template-*.md; do
+    stack="${template##*/project-claude-template-}"
+    stack="${stack%.md}"
+    [[ "$usage" == *"$stack"* ]] || {
+      echo "stack '$stack' has a template but is missing from the sync.sh usage text"
+      return 1
+    }
+  done
+}
+
 @test "init copies templated files and writes a version stamp" {
   bootstrap
   [ -f "$PROJECT/.github/pull_request_template.md" ]
