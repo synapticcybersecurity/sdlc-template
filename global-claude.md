@@ -49,6 +49,10 @@ All substantial changes should map to a tracked work item (GitHub Issue, Jira, L
 - When a working copy may be used by more than one agent/session at once, the checkout shares a single git HEAD and index. Branch operations interleave: a `git checkout` (or `checkout -b`) in one session moves HEAD for **both**, so commits can silently land on the wrong branch. `git checkout -b` is **not** isolation under concurrency.
 - Isolate branch work in a dedicated `git worktree` (its own HEAD/index) instead: `git -C <repo> worktree add <repo>-<task> -b <branch> origin/main` — or use the harness's worktree isolation (the Agent tool's `isolation: "worktree"`, or `EnterWorktree`), which also auto-cleans.
 - If you must work in the shared checkout, verify `git branch --show-current` immediately before **every** commit and push, and stop (surface to the user) if it isn't the branch you created. Treat HEAD as shared mutable state.
+- **Because of the rule above, the main checkout is not the whole repo — check before concluding anything is absent.** Work routinely sits on a branch in a linked worktree while the main checkout shows a clean `main`. Searching it and finding nothing does not mean the file, feature, test, or doc doesn't exist, and the costly outcome isn't a wrong answer to the user — it's rebuilding something that already exists. Before saying "there is no X", or starting to build one:
+  - `git worktree list` — run from any checkout of the repo, it lists them all. A listed path may already be deleted (stale metadata, cleared by `git worktree prune`), so confirm the directory exists before reading it.
+  - `git branch -a` — though work that was never pushed shows only in the worktree.
+  - Whether local `main` is behind `origin/main`. A merged PR is invisible in a stale checkout — a *separate* mechanism from the worktree case that produces the identical wrong conclusion.
 
 **Commits:**
 ```
