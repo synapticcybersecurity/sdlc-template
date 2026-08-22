@@ -21,7 +21,7 @@ This repo is bash + markdown. Its outputs are *other repos'* instructions: the s
 ## Editing the Standards
 
 - **`global-claude.md` is the live source** of the global standards, imported by `~/.claude/CLAUDE.md`. Editing it changes behavior in **every project on the machine**, not just this repo — treat changes as high blast radius and surface them.
-- **Stack templates are the artifact, edited in place** (`project-claude-template-{typescript,python,go,rust,ansible}.md`). A change that applies to more than one stack usually needs mirroring across them — cross-template drift is a known failure mode. Keep the shared **Work Tracking** block identical across templates, and keep each template's commented **Project Architecture** placeholder intact.
+- **Stack templates are the artifact, edited in place** (`project-claude-template-{typescript,python,go,rust,swift,ansible}.md`). A change that applies to more than one stack usually needs mirroring across them — cross-template drift is a known failure mode. Keep the shared **Work Tracking** block identical across templates, and keep each template's commented **Project Architecture** placeholder intact.
 - **Editorial bar (from the README Design Principles):** every line in a standards/template file must either redirect Claude's default behavior or supply project-specific context it can't discover on its own. If global already covers it, or it's aspirational, leave it out. This applies when editing `global-claude.md`, the stack templates, and the docs scaffolding.
 
 ---
@@ -56,7 +56,7 @@ When modifying `bin/sync.sh`, preserve these:
 
 **Key directories:**
 - `global-claude.md` — shared standards, imported live into every project
-- `project-claude-template-<stack>.md` — per-stack project `CLAUDE.md` templates (typescript, python, go, rust, ansible)
+- `project-claude-template-<stack>.md` — per-stack project `CLAUDE.md` templates (typescript, python, go, rust, swift, ansible)
 - `bin/sync.sh` — bootstrap (`init`), drift detection (`check`), and re-sync (`update`)
 - `test/` — bats suite (`sync.bats`) + vendored `test/bats` submodule
 - `.github/`, `docs/` — scaffolding **propagated** into consumer projects (see Propagation Trap)

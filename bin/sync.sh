@@ -2,7 +2,7 @@
 # bin/sync.sh — bootstrap projects from this template and detect drift.
 #
 # Subcommands:
-#   init <project-path> --stack=<typescript|python|go|rust|ansible> [--force]
+#   init <project-path> --stack=<typescript|python|go|rust|swift|ansible> [--force]
 #       Bootstrap a NEW project: copy .github/, the chosen stack template
 #       (as CLAUDE.md), and docs scaffolding. Refuses to overwrite existing
 #       files without --force. Writes .sdlc-template-version.
@@ -43,7 +43,7 @@ usage() {
 Usage: $(basename "$0") <subcommand> [args]
 
 Subcommands:
-  init <project-path> --stack=<typescript|python|go|rust|ansible> [--force]
+  init <project-path> --stack=<typescript|python|go|rust|swift|ansible> [--force]
       Bootstrap a new project from this template.
 
   adopt <project-path> --stack=<...> [--force]
@@ -117,7 +117,7 @@ cmd_init() {
   done
 
   [[ -n "$target" ]] || die "init requires a project path"
-  [[ -n "$stack"  ]] || die "init requires --stack=<typescript|python|go|rust|ansible>"
+  [[ -n "$stack"  ]] || die "init requires --stack=<typescript|python|go|rust|swift|ansible>"
   [[ -d "$target" ]] || die "target directory does not exist: $target"
 
   local stack_template="$REPO_ROOT/project-claude-template-${stack}.md"
@@ -414,7 +414,7 @@ cmd_adopt() {
   done
 
   [[ -n "$target" ]] || die "adopt requires a project path"
-  [[ -n "$stack"  ]] || die "adopt requires --stack=<typescript|python|go|rust|ansible>"
+  [[ -n "$stack"  ]] || die "adopt requires --stack=<typescript|python|go|rust|swift|ansible>"
   [[ -d "$target" ]] || die "target directory does not exist: $target"
 
   local stack_template="$REPO_ROOT/project-claude-template-${stack}.md"
