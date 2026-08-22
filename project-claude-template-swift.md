@@ -48,7 +48,7 @@ If the scope is unclear, ask the user once: *"Is this a focused fix/feature or a
   - **Local SPM package** — dropping the file into the package's `Sources/` directory is enough. This is why new code belongs in packages.
   - **Raw `.xcodeproj`** — tell the user the file needs adding to the target in Xcode. Do **not** hand-edit `project.pbxproj`.
 - **Treat `project.pbxproj` as generated.** It is a machine-managed file with UUID cross-references; hand edits corrupt it and merge conflicts in it are not resolvable by eye.
-- **Commit shared schemes** (`xcshareddata/xcschemes/`) so CI and every developer build the same thing. Never commit `xcuserdata/` or `DerivedData/`.
+- **Commit shared schemes** (`xcshareddata/xcschemes/`) so CI and every developer build the same thing — *unless the project is generated*, in which case the manifest defines the schemes, the whole `.xcodeproj` is gitignored, and there is nothing to commit. Never commit `xcuserdata/` or `DerivedData/`.
 
 ---
 
@@ -149,7 +149,8 @@ Swift 6 language mode turns data races into compile errors. That diagnostic is t
 ## Dependency Management
 
 - **Swift Package Manager only.** Do not introduce CocoaPods or Carthage into a project that doesn't already have them.
-- **`Package.resolved` is committed.** In an app project it hides at `<App>.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved` (or inside the `.xcworkspace`) — easy to miss, so confirm it's staged after any dependency change.
+- **The resolved dependency graph must be pinned somewhere committed.** In a hand-maintained app project that's `<App>.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved` — easy to miss in a diff, so confirm it's staged after any dependency change. **In a generated project that path is inside a gitignored `.xcodeproj` and cannot be committed at all**; pin in the local package's `Package.resolved` and keep the manifest's version rules tight.
+  - A blanket `Package.resolved` line in `.gitignore` is harmless *only* while the project has zero external dependencies. It silently becomes a reproducibility hole the moment one is added — revisit the ignore rule as part of adding the first dependency, not later.
 - **Never depend on a `branch:` or a moving `revision:`** in a shipping app. Use `.upToNextMajor(from:)`, or an exact pin for anything that has broken you before.
 - **Minimal dependencies.** Foundation, SwiftUI, Observation, `URLSession` + `Codable`, CryptoKit, and SwiftData cover most of what small packages offer — and every dependency is code you ship and Apple reviews.
 - **Dependency bumps are their own change** with their own PR, so the `Package.resolved` diff is reviewable. Don't let them ride along.
@@ -194,6 +195,7 @@ This replaces global §6 (Operational Verification) for this repo.
 - **Never raise the deployment target to use a newer API without surfacing it.** It drops users on older OS versions — that's a product decision, not an implementation detail (global §1). Guard newer APIs with `if #available(…)` instead.
 - **Keep the main thread free.** File I/O, decoding large payloads, and image processing move off the main actor. A dropped frame is a bug, not a polish item.
 - **Watch for retain cycles in escaping closures** — `[weak self]` where the closure outlives its owner; note that a `Task { }` capturing `self` keeps a view model alive past the view.
+- **Answer export compliance once, in the build settings.** Without `ITSAppUsesNonExemptEncryption` set, **every** upload lands in TestFlight as "Missing Compliance" and cannot be distributed until someone answers the questionnaire in the web UI. It is usually `NO` — HTTPS provided by the OS is exempt — but it is a legal declaration, so justify it on the exemption, not on "this app makes no network calls," which stops being true the first time a feature adds a fetch.
 - **New capabilities are architecture changes.** Push notifications, background modes, App Groups, HealthKit, and similar entitlements alter provisioning and App Store review — surface before adding, per global §1.
 - **Never delete or reset a SwiftData/Core Data store to resolve a schema mismatch** on anything that could hold real user data — write a migration. If a migration fails, stop and ask; there is no undo on a user's device.
 - **User-facing strings go through the string catalog** (`String(localized:)`), and non-text controls get accessibility labels — retrofitting either is far more expensive than doing it inline.
