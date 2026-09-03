@@ -75,6 +75,14 @@ guard_commit_in_main() {
   [ -z "$repo" ] && return 0
   repo_in_scope "$repo" || return 0
 
+  # A repo with no commits at all cannot have the problem this guard prevents:
+  # there is no shared branch to land on yet, and `git worktree add` needs a
+  # commit to base the worktree on, so the remedy we would print is impossible
+  # to follow. Let the first commit through. (#39)
+  if [ -z "$(git -C "$gdir" rev-list -n1 --all 2>/dev/null)" ]; then
+    return 0
+  fi
+
   if git_main_worktree "$gdir"; then
     local hint=""
     if git_dir_arg_unexpandable "$cmd"; then

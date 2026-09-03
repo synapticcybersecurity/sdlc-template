@@ -134,11 +134,123 @@ repo_in_scope() {
   return 0                              # broad mode: all repos in scope
 }
 
+# _shell_tokens <string> — split a command segment into shell-ish tokens on
+# unquoted whitespace, honouring '...' and "..." and backslash escapes. Emits
+# one token per line with quotes removed. Not a full shell parser: it exists so
+# that a quoted option value containing spaces stays ONE token, which is the
+# property the git-subcommand walk depends on.
+_shell_tokens() {
+  printf '%s' "$1" | awk '
+    {
+      n = length($0); tok = ""; have = 0; q = ""
+      for (i = 1; i <= n; i++) {
+        c = substr($0, i, 1)
+        if (q == "") {
+          if (c == "\"" || c == "'"'"'") { q = c; have = 1; continue }
+          if (c == "\\") { i++; if (i <= n) { tok = tok substr($0, i, 1); have = 1 }; continue }
+          if (c == " " || c == "\t") {
+            if (have) { print tok; tok = ""; have = 0 }
+            continue
+          }
+          tok = tok c; have = 1
+        } else {
+          if (c == q) { q = ""; continue }
+          if (q == "\"" && c == "\\") { i++; if (i <= n) { tok = tok substr($0, i, 1) }; continue }
+          tok = tok c; have = 1
+        }
+      }
+      if (have) print tok
+    }'
+}
+
+# _git_subcommand_is <segment> <subcommand> — true if <segment> invokes git
+# with <subcommand> as its git subcommand.
+#
+# Walks tokens rather than pattern-matching the raw string. A regex cannot do
+# this correctly: allowing arbitrary text between `git` and the subcommand
+# matches ordinary prose ("its own git repo (root commit abc123)"), while
+# restricting it to option-shaped tokens stops matching real invocations whose
+# option values are quoted and contain spaces
+# (`git -c user.name="Some Name" commit`). The second failure is the dangerous
+# one, so parse instead of guess. See issue #39.
+_git_subcommand_is() {
+  local seg="$1" want="$2"
+  local -a toks=()
+  local t
+  while IFS= read -r t; do toks+=("$t"); done < <(_shell_tokens "$seg")
+  [ "${#toks[@]}" -eq 0 ] && return 1
+
+  local i=0 n=${#toks[@]}
+
+  # Skip leading env assignments (FOO=bar git ...) and a `command`/`exec` prefix.
+  while [ "$i" -lt "$n" ]; do
+    case "${toks[$i]}" in
+      *=*) case "${toks[$i]}" in -*) break ;; *) i=$((i+1)); continue ;; esac ;;
+      command|exec|builtin) i=$((i+1)); continue ;;
+      *) break ;;
+    esac
+  done
+  [ "$i" -ge "$n" ] && return 1
+
+  # The program itself must be git (bare, or any path ending in /git).
+  case "${toks[$i]}" in
+    git|*/git) : ;;
+    *) return 1 ;;
+  esac
+  i=$((i+1))
+
+  # Skip git's global options. These take a separate value token unless given
+  # as --opt=value, so consume the following token for those.
+  while [ "$i" -lt "$n" ]; do
+    case "${toks[$i]}" in
+      -C|-c|--git-dir|--work-tree|--namespace|--exec-path|--super-prefix)
+        i=$((i+2)); continue ;;
+      --*=*) i=$((i+1)); continue ;;
+      -*) i=$((i+1)); continue ;;
+      *) break ;;
+    esac
+  done
+  [ "$i" -ge "$n" ] && return 1
+
+  [ "${toks[$i]}" = "$want" ]
+}
+
+# _command_segments <command> — split a command line into segments on unquoted
+# `;`, `&&`, `||`, `|` and newlines, one per line. Each segment can then be
+# examined as its own invocation.
+_command_segments() {
+  printf '%s' "$1" | awk '
+    {
+      n = length($0); seg = ""; q = ""
+      for (i = 1; i <= n; i++) {
+        c = substr($0, i, 1)
+        if (q == "") {
+          if (c == "\"" || c == "'"'"'") { q = c; seg = seg c; continue }
+          if (c == "\\") { seg = seg c; i++; if (i <= n) seg = seg substr($0, i, 1); continue }
+          if (c == ";" || c == "|" || c == "&" || c == "\n") { print seg; seg = ""; continue }
+          seg = seg c
+        } else {
+          if (c == q) { q = "" }
+          else if (q == "\"" && c == "\\") { seg = seg c; i++; if (i <= n) seg = seg substr($0, i, 1); continue }
+          seg = seg c
+        }
+      }
+      print seg
+    }'
+}
+
 # is_git_commit <command> — true if the command runs `git ... commit` (commit
-# as the git subcommand). Handles `git commit`, `git -C dir commit`, flags, etc.
-# Avoids false positives like `git log` or `git commitfoo`.
+# as the git subcommand). Handles `git commit`, `git -C dir commit`, quoted
+# option values with spaces, env prefixes, and multiple commands in one line.
+# Does not match prose that merely contains the words (see #39), nor `git log`
+# or `git commitfoo`.
 is_git_commit() {
-  printf '%s' "$1" | grep -Eq '(^|[^[:alnum:]_/.-])git[[:space:]]+([^|;&]*[[:space:]])?commit([[:space:]]|$|[;|&])'
+  local seg
+  while IFS= read -r seg; do
+    [ -n "$seg" ] || continue
+    _git_subcommand_is "$seg" commit && return 0
+  done < <(_command_segments "$1")
+  return 1
 }
 
 # has_commit_all_flag <command> — true if a `-a`/`--all` style flag is present
