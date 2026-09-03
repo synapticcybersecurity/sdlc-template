@@ -182,18 +182,20 @@ cmd()  { printf '%s' "$(bash_json "$1" "$2")" | "$HOOKS/pre-bash.sh"; }
 # no shared branch to protect yet.
 
 @test "the first commit in a repo with no history is allowed" {
+  # Deliberately NOT newrepo: that helper makes an initial commit, and the
+  # point here is a repo that has none.
   local fresh="$ROOT/brand-new"
-  mkdir -p "$fresh"
-  git -C "$fresh" init -q
+  git init -q "$fresh"
   run cmd "git commit -m init" "$fresh"
   [ -z "$output" ]
 }
 
 @test "a repo with history still denies commits in its main checkout" {
+  # Pairs with the test above: the no-history early return must not disable
+  # the guard for repos that do have history. newrepo sets a git identity, so
+  # this does not depend on the runner having one configured.
   local used="$ROOT/has-history"
-  mkdir -p "$used"
-  git -C "$used" init -q
-  git -C "$used" commit -qm init --allow-empty
+  newrepo "$used"
   run cmd "git commit -m second" "$used"
   [[ "$output" == *"MAIN checkout"* ]]
 }
