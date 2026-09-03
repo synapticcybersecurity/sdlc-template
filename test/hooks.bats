@@ -124,6 +124,82 @@ cmd()  { printf '%s' "$(bash_json "$1" "$2")" | "$HOOKS/pre-bash.sh"; }
   [ -z "$output" ]
 }
 
+# worktree guard — commit detection (#39)
+#
+# The matcher must not fire on prose that happens to contain the words, and
+# must still fire when option values are quoted and contain spaces. The second
+# direction is the one that matters: a miss there lets work land on a shared
+# branch silently.
+
+@test "prose containing git and commit is not treated as a commit" {
+  run cmd "echo 'its own git repo (root commit abc1234, 2026-09-03)' > /dev/null" "$REPO"
+  [ -z "$output" ]
+}
+
+@test "writing prose about commits into a file is allowed" {
+  run cmd "printf '%s' 'the git history shows every commit since March' > notes.md" "$REPO"
+  [ -z "$output" ]
+}
+
+@test "git commit with a quoted option value containing spaces is still denied" {
+  run cmd "git -c user.name=\"Some Name\" -c user.email=\"a@b.c\" commit -m x" "$REPO"
+  [[ "$output" == *"MAIN checkout"* ]]
+}
+
+@test "git commit with single-quoted option value is still denied" {
+  run cmd "git -c user.name='Some Name' commit -m 'a message'" "$REPO"
+  [[ "$output" == *"MAIN checkout"* ]]
+}
+
+@test "git commit behind an env assignment is still denied" {
+  run cmd "GIT_AUTHOR_NAME=x git commit -m y" "$REPO"
+  [[ "$output" == *"MAIN checkout"* ]]
+}
+
+@test "git commit via an absolute path to git is still denied" {
+  run cmd "/usr/bin/git commit -m y" "$REPO"
+  [[ "$output" == *"MAIN checkout"* ]]
+}
+
+@test "git commit later in a chained command is still denied" {
+  run cmd "git add -A && git commit -m 'msg with ; and | chars'" "$REPO"
+  [[ "$output" == *"MAIN checkout"* ]]
+}
+
+@test "other git subcommands are not treated as commits" {
+  run cmd "git log --oneline" "$REPO"
+  [ -z "$output" ]
+  run cmd "git worktree list" "$REPO"
+  [ -z "$output" ]
+  run cmd "git commitfoo" "$REPO"
+  [ -z "$output" ]
+}
+
+# worktree guard — a repo with no commits (#39)
+#
+# `git worktree add` needs a commit to base the worktree on, so the remedy the
+# guard prints cannot be followed on a freshly initialised repo. There is also
+# no shared branch to protect yet.
+
+@test "the first commit in a repo with no history is allowed" {
+  # Deliberately NOT newrepo: that helper makes an initial commit, and the
+  # point here is a repo that has none.
+  local fresh="$ROOT/brand-new"
+  git init -q "$fresh"
+  run cmd "git commit -m init" "$fresh"
+  [ -z "$output" ]
+}
+
+@test "a repo with history still denies commits in its main checkout" {
+  # Pairs with the test above: the no-history early return must not disable
+  # the guard for repos that do have history. newrepo sets a git identity, so
+  # this does not depend on the runner having one configured.
+  local used="$ROOT/has-history"
+  newrepo "$used"
+  run cmd "git commit -m second" "$used"
+  [[ "$output" == *"MAIN checkout"* ]]
+}
+
 # git_effective_dir — `-C` argument resolution (unit). A leading ~ must
 # expand to $HOME so `git -C ~/worktree commit` isn't read as a relative
 # dir under cwd and false-denied; $VAR stays unresolved (conservative).
