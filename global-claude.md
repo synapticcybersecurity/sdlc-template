@@ -15,6 +15,7 @@ Every change is part of an engineering workflow. These rules apply to all work:
 - **Finish the unit of work:** Code, tests, documentation, and validation are one delivery — not separate tasks to defer.
 - **Offer documentation updates proactively:** After adding something new (a role, module, playbook, feature, command, configuration knob) or making a significant change to existing items (architecture shift, renamed convention, behavior change, new constraint, dropped capability), explicitly offer to update relevant documentation — don't wait to be asked. Concrete candidates to consider every time: the project README, design docs in `docs/`, role/module READMEs, deferred-work or migration trackers, ADRs, inline CLAUDE.md files, and architectural memory entries. Surface specific update proposals (e.g. "the IPv6 explanation in `roles/foo/README.md` is now inaccurate; want me to fix it?") rather than open-ended "anything else?" prompts, so the user can accept or reject quickly.
 - **Don't volunteer stopping points:** Do not propose "good stopping point", "let's call it for the night", "stop here?" etc. unprompted, even after wrapping a substantial chunk of work. Summarize what happened and wait for the next instruction. The user will say when to stop.
+- **Judge session boundaries by subsystem, not by task:** Carry on in the same session while the next piece of work touches the same files; flag a fresh one when it crosses into a different subsystem. See "Session and Context Management" below. This is about where context stops being useful, not about when to stop working.
 
 ---
 
@@ -167,6 +168,35 @@ Applies to any repo that drives remote hosts over SSH — Ansible, deploy script
 - **With ordinary on-disk keys, this does not apply.** There is no prompt, so a short `ControlPersist` costs nothing. Don't raise it in projects whose keys are on disk — the rationale doesn't hold there, and the change would be unexplained.
 - **Ad-hoc `ssh` must use the project's SSH config, not the operator's.** Where a repo ships a project-local `ssh_config` (e.g. `inventory/<domain>/<env>/ssh_config`, loaded by Ansible via `ansible_ssh_common_args -F`), manual and ad-hoc `ssh` commands must pass the same `-F <that file>`. `~/.ssh/config` belongs to the operator and carries whatever interactive identity they prefer; automation must neither depend on it nor require changes to it.
 - **A project config used with `-F` must declare its own multiplexing.** `-F` makes ssh ignore `~/.ssh/config` entirely, so a project config lacking `ControlMaster`/`ControlPath`/`ControlPersist` silently *removes* connection reuse for every ad-hoc command. Set all three, and use `ControlPath ~/.ssh/cm/%C` — `%C` is a hash, and `ControlPath` has a hard ~104-byte limit that expanded paths under long working directories exceed.
+
+---
+
+## Session and Context Management
+
+A long session accumulates context that was expensive to build. Some of it is the reason the
+next piece of work will go well; the rest is noise. The judgement is which.
+
+- **Continue in the same session when the next work touches the same files.** What you are
+  holding — why a function is shaped the way it is, which tests are load-bearing, what was
+  already ruled out and why — is exactly what that work needs. Rebuilding it costs a round of
+  re-reading and risks re-litigating decisions that were already made.
+- **Recommend a fresh session when the work crosses into a different subsystem** and the
+  current context stops being relevant: backend to frontend, application code to
+  infrastructure, one repository to another. **Overlap in files is the signal** — not elapsed
+  time, not the size of what was just finished, and not the fact that a work item closed.
+- **Write the durable record before recommending one.** A fresh session starts from memory
+  files, CLAUDE.md, READMEs, issues and ADRs — never from the transcript. If a decision, a
+  constraint, or a hard-won discovery exists only in the conversation, write it down first.
+  That is what makes starting fresh cheap instead of lossy, and it is the step that is
+  actually easy to skip.
+- **Recommending a new session is not proposing a stopping point** (see Operating Rules) and
+  must never be phrased as one. Flag the boundary as a note and keep working; the user decides
+  when to break. Asked directly, give one recommendation with its reason rather than a survey
+  of options.
+- **Do not start over to escape a confused session.** Being stuck is a signal to re-read the
+  code and restate the problem, not to reset. Fresh context inherits the same wrong assumption
+  if the assumption was never written down and corrected — and it arrives without the evidence
+  that would have exposed it.
 
 ---
 
