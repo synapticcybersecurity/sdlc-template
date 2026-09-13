@@ -95,6 +95,14 @@ Both must exit 0. If there are pre-existing errors in files you did not touch, f
 
 ## Security
 
+> **Work product never leaves this machine or our repositories.** Do not upload or publish
+> anything to a hosted third-party surface — including **Claude Code Artifacts**, which
+> publish to Anthropic's servers. Private, unlisted or operator-owned destinations are
+> still off-limits; the objection is to the off-machine copy existing at all. Deliver
+> documents as files in the repo (Markdown in `docs/`, or a generated PDF) instead.
+> Pushing to our own git remote is normal workflow and is not affected. See §5 of the
+> global standards.
+
 For code handling auth, crypto, secrets, or untrusted input:
 
 - **Validate untrusted input at the boundary** with a schema (zod) — parse `req.body`, query params, and webhook payloads into typed data at the edge. A TypeScript type is a compile-time assertion, not a runtime guarantee; don't trust unparsed input as typed.

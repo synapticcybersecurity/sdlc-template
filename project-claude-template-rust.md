@@ -110,6 +110,14 @@ Rust makes error handling explicit. These rules prevent the common mistakes:
 
 ## Security
 
+> **Work product never leaves this machine or our repositories.** Do not upload or publish
+> anything to a hosted third-party surface — including **Claude Code Artifacts**, which
+> publish to Anthropic's servers. Private, unlisted or operator-owned destinations are
+> still off-limits; the objection is to the off-machine copy existing at all. Deliver
+> documents as files in the repo (Markdown in `docs/`, or a generated PDF) instead.
+> Pushing to our own git remote is normal workflow and is not affected. See §5 of the
+> global standards.
+
 For code handling auth, crypto, secrets, or untrusted input:
 
 - **Treat integer overflow as a bug.** Use checked/saturating/wrapping arithmetic deliberately on any value derived from input; keep debug overflow checks enabled.

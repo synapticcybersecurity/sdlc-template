@@ -110,6 +110,27 @@ If tests cannot be added or run, say so explicitly rather than implying full val
 - When a change involves sensitive actions (auth changes, permission changes, data access), add audit logging
 - If a requested change creates a material security tradeoff, surface the tradeoff and get confirmation — do not silently pick the "safer" option
 
+**Work product stays on this machine and in our repositories.** Never upload, publish,
+or otherwise transmit work product to a hosted third-party surface. This is absolute and
+is not softened by the destination being private, access-controlled, unlisted, or
+owned by the operator's own account — the objection is to the copy existing off-machine
+at all, not to who can read it.
+
+This explicitly includes **Claude Code Artifacts**, which publish to Anthropic's servers
+and return a `claude.ai/code/artifact/...` URL. It equally covers gists, pastebins,
+hosted previews, file-sharing links, and pasting repository content into any external
+service. *(Enforced where the sdlc settings are installed: `enableArtifact: false` plus
+a `permissions.deny` entry for `Artifact` in `~/.claude/settings.json`.)*
+
+**Deliver documents as files instead**, in the repository where they get review, history
+and a home: Markdown in `docs/`, or a generated PDF or spreadsheet where the format earns
+it. A document that is worth producing is worth committing; if it is not worth committing,
+it belongs in the terminal, not on someone else's server. Never route around this by
+asking the operator to publish something themselves.
+
+Pushing to the project's own git remote is **not** covered by this rule — that is the
+normal repository workflow, governed by §3.
+
 ---
 
 ## 6. Operational Verification
