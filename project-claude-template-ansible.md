@@ -95,6 +95,14 @@ There are **three scopes for where behavior belongs** — choose deliberately:
 
 ## Variables & Secrets
 
+> **Work product never leaves this machine or our repositories.** Do not upload or publish
+> anything to a hosted third-party surface — including **Claude Code Artifacts**, which
+> publish to Anthropic's servers. Private, unlisted or operator-owned destinations are
+> still off-limits; the objection is to the off-machine copy existing at all. Deliver
+> documents as files in the repo (Markdown in `docs/`, or a generated PDF) instead.
+> Pushing to our own git remote is normal workflow and is not affected. See §5 of the
+> global standards.
+
 - **Variable precedence is a footgun** — keep it simple: fleet-wide defaults in `group_vars/all/`, per-environment identity (e.g. `domain_name`, `deployment_environment`) in environment `group_vars`, host specifics in `host_vars/<fqdn>/`. Use directory-form `group_vars/<group>/` (split files) over one giant file.
 - **Before renaming a variable or changing a role's interface**, grep for its use across `group_vars/`, `host_vars/`, and `roles/` (and any `apply-*`/`site.yml` references) — the Ansible analog of "grep for callers before changing a signature."
 - **Secrets live in Ansible Vault** (`vault.yml` per scope), never in plaintext vars or in the repo.

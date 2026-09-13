@@ -122,6 +122,14 @@ Swift 6 language mode turns data races into compile errors. That diagnostic is t
 
 ## Security
 
+> **Work product never leaves this machine or our repositories.** Do not upload or publish
+> anything to a hosted third-party surface — including **Claude Code Artifacts**, which
+> publish to Anthropic's servers. Private, unlisted or operator-owned destinations are
+> still off-limits; the objection is to the off-machine copy existing at all. Deliver
+> documents as files in the repo (Markdown in `docs/`, or a generated PDF) instead.
+> Pushing to our own git remote is normal workflow and is not affected. See §5 of the
+> global standards.
+
 - **The app binary is client-side and fully readable.** Anything embedded in source, `Info.plist`, an `.xcconfig`, or the asset catalog — API keys, secrets, private endpoints — ships to every user and is extractable from an IPA. Secrets belong on a server; if a third-party API needs one, proxy the call. Obfuscation is not a mitigation.
 - **Credentials and tokens live in the Keychain**, never `UserDefaults`, a plist, or a file in Documents. Choose accessibility deliberately (`…ThisDeviceOnly` for anything that must not restore onto a new device).
 - **Leave App Transport Security on.** No `NSAllowsArbitraryLoads` — an ATS exception added to make a local dev server work ships to production. If a scoped domain exception is genuinely unavoidable, flag it to the user.
